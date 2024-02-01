@@ -43,11 +43,12 @@ def process_input_MACS2(data, qval = 0.05, option = 'native_peak_boundaries',
     return peaks
 
 def decompose_peaks(peaks):
-    return {'chr' + name: group for name, group in peaks.groupby(['chr'], group_keys=False)}
+    return {'chr' + str(name[0]): group for name, group in peaks.groupby(['chr'], group_keys=False)}
 
 def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir):
+    output = pd.DataFrame()
     for key in decomposed_peaks.keys():
-        features = pd.read_csv(ref_dir + species + "/" + feature_type + "/" + key)
+        features = pd.read_csv(ref_dir + species + "/" + feature_type + "/" + key + '.csv')
         output = pd.concat([output, get_nearest_features(decomposed_peaks[key], features, num_features)], 
                         ignore_index = False, sort = False)
 
@@ -86,17 +87,17 @@ def get_nearest_features(roi, features, k):
                 closest = upstream
                 upstream -= 1
                 
-            return_roi.iloc[index, len(return_roi.columns) - i] = features.iloc[closest, :]['name']
+            return_roi.iloc[index, len(return_roi.columns) - i] = features.iloc[closest, :]['gene_name']
             i -= 1
         
         if i > 0 and upstream < 0:
             while i > 0 and downstream < len(features):
-                return_roi.iloc[index, len(return_roi.columns) - i] = features.iloc[downstream, :]['name']
+                return_roi.iloc[index, len(return_roi.columns) - i] = features.iloc[downstream, :]['gene_name']
                 downstream += 1
                 i -= 1
         elif i > 0 and downstream >= len(features):
             while i > 0 and upstream > -1:
-                return_roi.iloc[index, len(return_roi.columns) - i] = features.iloc[upstream, :]['name']
+                return_roi.iloc[index, len(return_roi.columns) - i] = features.iloc[upstream, :]['gene_name']
                 upstream -= 1
                 i -= 1
 
