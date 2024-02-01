@@ -7,15 +7,40 @@ def decompose_df(ref_dir, species, full_ref, col_names):
 
     full_df = pd.read_csv(ref_dir + species + "/" + full_ref, sep = "\t", skiprows=5, names = col_names)
 
-    decomposed_dfs = {name: group for name, group in full_df.groupby(['chr', 'type'], group_keys=False)}
+    decomposed_dfs = {name: group.sort_values(by = 'start') for name, group in full_df.groupby(['chr', 'type'], group_keys=False)}
 
     for name, group in decomposed_dfs.items():
         chr = name[0]
         type_name = name[1]
         if not os.path.exists(ref_dir + species + "/" + type_name):
             os.mkdir(ref_dir + species + "/" + type_name)
+
+        group = split_jumble(group)
+        group.to_csv(ref_dir + species + "/" + type_name + "/" + chr + '.csv') 
+        print(name)
+
+def split_jumble(df):
+    jumble_data = df['info']
+
+    unique_keys = set()
+
+    for row in jumble_data.to_numpy():
+        keys = [pair.split(' ')[0] for pair in row.split('; ')]
+        unique_keys.update(keys)
     
-        group.to_csv(ref_dir + species + "/" + type_name + "/" + chr)
+    for key in unique_keys:
+        df[key] = None
+
+    for index, row in jumble_data.to_frame().iterrows():
+        key_value = {pair.split(' ')[0]: pair.split(' ')[1].replace('"', '').replace(';', '') 
+                    for pair in row['info'].split('; ')}
+        for key in key_value.keys():
+            df.loc[index, key] = key_value[key]
+    
+    del df['info']
+
+    return df
+
 
 ref_dir = 'reference/'
 col_names = ['chr', 'source', 'type', 'start', 'end', 'ph1', 'strand', 'ph2', 'info']
