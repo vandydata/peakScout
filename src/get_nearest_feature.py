@@ -15,8 +15,8 @@ def read_input_MACS2(data_dir, file):
     return peaks
 
 def read_input_SEACR(data_dir, file):
-    peaks = pd.read_csv(data_dir + file, sep = '\t', skiprows=22)
-    peaks.rename(columns={'-log10(pvalue)': 'neg_log10_pvalue', '-log10(qvalue)': 'neg_log10_qvalue'}, inplace=True)
+    col_names = ['chr', 'start', 'end', 'total_signal', 'max_signal', 'max_signal_region']
+    peaks = pd.read_csv(data_dir + file, sep = '\t', names=col_names)
 
     return peaks
 
@@ -25,6 +25,29 @@ def process_input_MACS2(data, qval = 0.05, option = 'native_peak_boundaries',
     
     peaks = data.loc[data['neg_log10_qvalue'] > -np.log10(qval)]
     peaks.sort_values(by = 'neg_log10_qvalue', ascending=False, inplace=True)
+
+    if num_peaks_cutoff is not None:
+        peaks = peaks.head(num_peaks_cutoff)
+
+    if option == 'peak_summit':
+        peaks['start'] = peaks['abs_summit']
+        peaks['end'] = peaks['abs_summit']
+    elif option == 'artifical_peak_boundaries' and boundary is not None:
+        peaks['start'] = peaks['abs_summit'] - boundary
+        peaks['end'] = peaks['abs_summit'] + boundary
+    elif option == 'native_peak_boundaries':
+        pass
+    else:
+        raise ValueError('Invalid peak start/end option')
+    
+    return peaks
+
+def process_input_SEACR(data, signal = None, option = 'native_peak_boundaries',
+                        boundary = None, num_peaks_cutoff = None):
+    peaks = data
+    if signal is not None:
+        peaks = data.loc[data['signal'] > signal]
+    # peaks.sort_values(by = 'neg_log10_qvalue', ascending=False, inplace=True)
 
     if num_peaks_cutoff is not None:
         peaks = peaks.head(num_peaks_cutoff)
@@ -55,7 +78,7 @@ def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir):
     if not os.path.exists("results/"):
         os.mkdir("results/")
 
-    output.to_csv('results/nearest_genes.csv', index = False)
+    output.to_csv('results/new_nearest_genes.csv', index = False)
 
 def get_nearest_features(roi, features, k):
     gene_starts = features['start'].values
@@ -120,61 +143,15 @@ num_nearest_features = 3
 option = "native_peak_boundaries"
 boundary = None
 
-peaks = read_input(data_dir, 'MACS2_peaks.xls', 'MACS2')
+peaks = read_input(data_dir, 'Pdx1_1_1000_R1.macs2_peaks.xls', 'MACS2')
 peaks = process_input_MACS2(peaks)
 decomposed_peaks = decompose_peaks(peaks)
 gen_output(decomposed_peaks, "mm10", "gene", 3, ref_dir)
 
+seacr_data = 'SEACR_peaks.bed'
+seacr_peaks = read_input(data_dir, seacr_data, 'SEACR')
+seacr_peaks = process_input_SEACR(seacr_peaks)
+decomposed_seacr_peaks = decompose_peaks(seacr_peaks)
+gen_output(decomposed_seacr_peaks, "mm10", "gene", 3, ref_dir)
 
-# peaks = pd.read_csv('data/Pdx1_1_100_R1.macs2_peaks.xls', sep='\t', skiprows=22)
-# peaks.rename(columns={'-log10(pvalue)': 'neg_log10_pvalue', '-log10(qvalue)': 'neg_log10_qvalue'}, inplace=True)
-
-# # filter peaks where qval > 0.05 and cutoff (if necessary)
-# peaks = peaks.loc[peaks['neg_log10_qvalue'] > 1.3]
-# peaks.sort_values(by = 'neg_log10_qvalue', ascending=False, inplace=True)
-
-# if num_peaks_cutoff is not None:
-#     peaks = peaks.head(num_peaks_cutoff)
-
-# # modify start and end columns
-# if option == 'peak_summit':
-#     peaks['start'] = peaks['abs_summit']
-#     peaks['end'] = peaks['abs_summit']
-# elif option == 'artifical_peak_boundaries':
-#     peaks['start'] = peaks['abs_summit'] - boundary
-#     peaks['end'] = peaks['abs_summit'] + boundary
-# elif option == 'native_peak_boundaries':
-#     pass
-# else:
-#     raise ValueError('Invalid peak start/end option')
-
-# # split peaks by chromosome
-# peaks_by_chr = {i: peaks.loc[peaks['chr'] == str(i)] for i in range(1, num_chr)}
-# peaks_by_chr['X'] = peaks.loc[peaks['chr'] == "X"]
-# peaks_by_chr['Y'] = peaks.loc[peaks['chr'] == "Y"]
-# peaks_by_chr['M'] = peaks.loc[peaks['chr'] == "M"]
-
-# ###################################################################################################
-# valid_chr = ['chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 'chr8', 'chr9', 'chrM', 'chrX', 
-#              'chrY', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 'chr17', 'chr18', 'chr19']
-# desired_cols = ['name', 'chrom', 'start', 'end']
-# start_name = 'txStart'
-# end_name = 'txEnd'
-
-# genes = pd.read_csv('data/mm10.csv', sep='\t')
-
-# genes.rename(columns={'#name': 'name', start_name: 'start', end_name: 'end'}, inplace=True)
-# genes = genes.loc[genes['chrom'].isin(valid_chr)][desired_cols]
-
-# genes_by_chr = {i: genes.loc[genes['chrom'] == "chr" + str(i)].sort_values(by = 'start') for i in range(1, num_chr)}
-# genes_by_chr['X'] = genes.loc[genes['chrom'] == "chrX"]
-# genes_by_chr['Y'] = genes.loc[genes['chrom'] == "chrY"]
-# genes_by_chr['M'] = genes.loc[genes['chrom'] == "chrM"]
-
-# output = pd.DataFrame()
-# for key in peaks_by_chr.keys():
-#     output = pd.concat([output, get_nearest_features(peaks_by_chr[key], genes_by_chr[key], num_nearest_features)], 
-#                        ignore_index = False, sort = False)
-
-# output.to_csv('results/nearest_genes.csv', index = False)
-
+print(decomposed_seacr_peaks)
