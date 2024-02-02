@@ -68,7 +68,7 @@ def process_input_SEACR(data, signal = None, option = 'native_peak_boundaries',
 def decompose_peaks(peaks):
     return {'chr' + str(name[0]): group for name, group in peaks.groupby(['chr'], group_keys=False)}
 
-def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir):
+def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name):
     output = pd.DataFrame()
     for key in decomposed_peaks.keys():
         features = pd.read_csv(ref_dir + species + "/" + feature_type + "/" + key + '.csv')
@@ -78,7 +78,8 @@ def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir):
     if not os.path.exists("results/"):
         os.mkdir("results/")
 
-    output.to_csv('results/new_nearest_genes.csv', index = False)
+    output.to_csv('results/' + output_name + '.csv', index = False)
+    output.to_excel('results/' + output_name + '.xlsx', index = False)
 
 def get_nearest_features(roi, features, k):
     gene_starts = features['start'].values
@@ -143,15 +144,12 @@ num_nearest_features = 3
 option = "native_peak_boundaries"
 boundary = None
 
-peaks = read_input(data_dir, 'Pdx1_1_1000_R1.macs2_peaks.xls', 'MACS2')
-peaks = process_input_MACS2(peaks)
-decomposed_peaks = decompose_peaks(peaks)
-gen_output(decomposed_peaks, "mm10", "gene", 3, ref_dir)
+macs2_peaks = read_input(data_dir, 'MACS2_peaks.xls', 'MACS2')
+macs2_peaks = process_input_MACS2(macs2_peaks)
+decomposed_macs2_peaks = decompose_peaks(macs2_peaks)
+gen_output(decomposed_macs2_peaks, "mm10", "gene", 3, ref_dir, 'MACS2_peaks')
 
-seacr_data = 'SEACR_peaks.bed'
-seacr_peaks = read_input(data_dir, seacr_data, 'SEACR')
+seacr_peaks = read_input(data_dir, 'SEACR_peaks.bed', 'SEACR')
 seacr_peaks = process_input_SEACR(seacr_peaks)
 decomposed_seacr_peaks = decompose_peaks(seacr_peaks)
-gen_output(decomposed_seacr_peaks, "mm10", "gene", 3, ref_dir)
-
-print(decomposed_seacr_peaks)
+gen_output(decomposed_seacr_peaks, "mm10", "gene", 3, ref_dir, 'SEACR_peaks')
