@@ -51,7 +51,7 @@ def split_jumble(df):
         df.insert_column(-1, pl.Series(name, group))
     
 
-    df = df.drop('info')
+    df.drop_in_place('info')
 
     return df
 
