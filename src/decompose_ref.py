@@ -7,11 +7,11 @@ def decompose_df(ref_dir, species, full_ref, col_names):
 
     full_df = pl.read_csv(ref_dir + species + "/" + full_ref, has_header=False, separator="\t", skip_rows=5, new_columns=col_names)
 
-    for name, group in full_df.group_by('type'):
+    for name, group in full_df.group_by(['type']):
         group = split_jumble(group)
 
-        decomposed_dfs_start = {(chr, name): chr_group.sort('start').unique(subset='start')
-                                 for chr, chr_group in group.group_by('chr')}
+        decomposed_dfs_start = {(chr[0], name[0]): chr_group.sort('start').unique(subset='start')
+                                 for chr, chr_group in group.group_by(['chr'])}
         save_csvs(decomposed_dfs_start, species, 'start')
 
         decomposed_dfs_end = {chr_name: chr_group.sort('end') 
