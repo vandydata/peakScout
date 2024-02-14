@@ -19,6 +19,14 @@ def peakScout(file_path, peak_type, species, feature_type, num_features, ref_dir
     else:
         raise TypeError('Invalid peak type')
     
+    print(peaks['start'])
+
+    if 'bed' in file_path:
+        peaks['start'] = peaks['start'] + 1
+        peaks['end'] = peaks['end'] + 1
+    
+    print(peaks['start'])
+    
     decomposed_peaks = decompose_peaks(peaks)
     gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name)
 
@@ -237,7 +245,7 @@ boundary = None
 
 for file in os.listdir(data_dir):
     # if "macs2" in file or "MACS2" in file:
-    if "MACS2" in file:
-        peakScout(data_dir + file, 'MACS2', "mm10", "gene", 3, ref_dir, file[:-4])
-    # elif "seacr" in file or "SEACR" in file:
-    #     peakScout(data_dir + file, 'SEACR', "mm10", "gene", 3, ref_dir, file[:-4])
+    # if "MACS2" in file:
+    #     peakScout(data_dir + file, 'MACS2', "mm10", "gene", 3, ref_dir, file[:-4])
+    if "seacr" in file or "SEACR" in file:
+        peakScout(data_dir + file, 'SEACR', "mm10", "gene", 3, ref_dir, file[:-4])
