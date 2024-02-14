@@ -1,6 +1,4 @@
-import pandas as pd
 import polars as pl
-import numpy as np
 import os
 
 def decompose_df(ref_dir, species, full_ref, col_names):
@@ -53,7 +51,7 @@ def split_jumble(df):
         df.insert_column(-1, pl.Series(name, group))
     
 
-    df.drop('info')
+    df = df.drop('info')
 
     return df
 
