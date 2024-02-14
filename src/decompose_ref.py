@@ -18,7 +18,7 @@ def decompose_df(ref_dir, species, full_ref, col_names):
 
         group = split_jumble(group)
         group.drop_duplicates(subset='start', keep='first', inplace=True)
-        group.to_csv(ref_dir + species + "/" + type_name + "/" + chr + '-start.csv') 
+        group.to_csv(ref_dir + species + "/" + type_name + "/" + chr + '_start.csv') 
         print(name)
 
     for name, group in decomposed_dfs_end.items():
