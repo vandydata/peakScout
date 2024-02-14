@@ -1,25 +1,23 @@
 import pandas as pd
 import polars as pl
+import numpy as np
 import os
 
 def decompose_df(ref_dir, species, full_ref, col_names):
     if not os.path.exists(ref_dir + species):
         os.mkdir(ref_dir + species)
 
-    full_df = pd.read_csv(ref_dir + species + "/" + full_ref, sep = "\t", skiprows=5, names = col_names)
-    # full_df = pl.read_csv(ref_dir + species + "/" + full_ref, separator="\t", skip_rows=5, columns=col_names)
+    full_df = pl.read_csv(ref_dir + species + "/" + full_ref, has_header=False, separator="\t", skip_rows=5, new_columns=col_names)
 
-    for name, group in full_df.groupby(by='type', group_keys=False):
-    # for name, group in full_df.group_by('type'):
-        print(name)
+    for name, group in full_df.group_by('type'):
         group = split_jumble(group)
 
-        decomposed_dfs_start = {(chr, name): chr_group.sort_values(by='start').drop_duplicates(subset='start')
-                                 for chr, chr_group in group.groupby(by='chr', group_keys=False)}
+        decomposed_dfs_start = {(chr, name): chr_group.sort('start').unique(subset='start')
+                                 for chr, chr_group in group.group_by('chr')}
         save_csvs(decomposed_dfs_start, species, 'start')
 
-        decomposed_dfs_end = {inner_name: chr_group.sort_values(by='end') 
-                              for inner_name, chr_group in decomposed_dfs_start.items()}
+        decomposed_dfs_end = {chr_name: chr_group.sort('end') 
+                              for chr_name, chr_group in decomposed_dfs_start.items()}
         save_csvs(decomposed_dfs_end, species, 'end')
 
 def save_csvs(df, species, col):
@@ -29,32 +27,33 @@ def save_csvs(df, species, col):
         if not os.path.exists(ref_dir + species + "/" + type_name):
             os.mkdir(ref_dir + species + "/" + type_name)
 
-        group.to_csv(ref_dir + species + "/" + type_name + "/" + chr + '_' + col + '.csv') 
+        group.write_csv(ref_dir + species + "/" + type_name + "/" + chr + '_' + col + '.csv') 
         print(name)
 
 def split_jumble(df):
-    jumble_data = df['info']
+    jumble_data = df.select('info')
 
     unique_keys = set()
 
     for row in jumble_data.to_numpy():
-        keys = [pair.split(' ')[0] for pair in row.split('; ')]
+        keys = [pair.split(' ')[0] for pair in row[0].split('; ')]
         unique_keys.update(keys)
     
-    for key in unique_keys:
-        df[key] = None
-    
-    i = 1
-    for index, row in jumble_data.to_frame().iterrows():
-        if (index > i * 50000): 
-            print(index)
-            i += 1
+    cols_to_add = {key: [] for key in unique_keys}
+    for row in jumble_data.iter_rows(named=True):
         key_value = {pair.split(' ')[0]: pair.split(' ')[1].replace('"', '').replace(';', '') 
                     for pair in row['info'].split('; ')}
-        for key in key_value.keys():
-            df.loc[index, key] = key_value[key]
+        for key in unique_keys:
+            try:
+                cols_to_add[key].append(key_value[key])
+            except:
+                cols_to_add[key].append(None)
     
-    del df['info']
+    for name, group in cols_to_add.items():
+        df.insert_column(-1, pl.Series(name, group))
+    
+
+    df.drop('info')
 
     return df
 
