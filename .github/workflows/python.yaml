@@ -1,5 +1,5 @@
 name: peakScout
 
-on: [push]
+# on: [push]
 
 # need to add some tests
