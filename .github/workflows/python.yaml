@@ -2,3 +2,4 @@ name: peakScout
 
 on: [push]
 
+# need to add some tests
