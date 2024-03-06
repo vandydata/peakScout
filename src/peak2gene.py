@@ -8,7 +8,8 @@ from openpyxl.utils import get_column_letter
 from get_nearest_feature import get_nearest_features
 
 def peak2gene(file_path, peak_type, species, feature_type, num_features, ref_dir, output_name,
-              option = 'native_peak_boundaries', boundary = None, num_peaks_cutoff = None):
+              option = 'native_peak_boundaries', boundary = None, num_peaks_cutoff = None, 
+              up_bound = None, down_bound = None):
     if peak_type == 'MACS2' and 'xls' in file_path:
         peaks = read_input_MACS2_xls(file_path)
         peaks = process_input_MACS2_xls(peaks)
@@ -26,7 +27,8 @@ def peak2gene(file_path, peak_type, species, feature_type, num_features, ref_dir
         peaks['end'] = peaks['end'] + 1
     
     decomposed_peaks = decompose_peaks(peaks)
-    gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name)
+    gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name, up_bound,
+               down_bound)
 
 def read_input_MACS2_xls(file_path):
     peaks = pl.read_csv(file_path, separator = '\t', skip_rows=22)
@@ -56,19 +58,46 @@ def process_input_MACS2_xls(data, qval = None, option = 'native_peak_boundaries'
     if num_peaks_cutoff is not None:
         peaks = peaks.head(num_peaks_cutoff)
 
-    peaks = peak_start_end(peaks, option)
+    if option == 'peak_summit':
+        peaks.drop_in_place('start')
+        peaks.with_columns((peaks.col('abs_summit')).alias('start'))
+        peaks.drop_in_place('end')
+        peaks.with_columns((peaks.col('abs_summit')).alias('end'))
+    elif option == 'artifical_peak_boundaries' and boundary is not None:
+        peaks.drop_in_place('start')
+        peaks.with_columns((peaks.col('abs_summit') - boundary).alias('start'))
+        peaks.drop_in_place('end')
+        peaks.with_columns((peaks.col('abs_summit') + boundary).alias('end'))
+    elif option == 'native_peak_boundaries':
+        pass
+    else:
+        raise ValueError('Invalid peak start/end option')
     
     return peaks
 
 def process_input_MACS2_bed(data, score = 0.05, option = 'native_peak_boundaries', 
                   boundary = None, num_peaks_cutoff = None):
+    
     peaks = data
 
     if num_peaks_cutoff is not None:
         peaks = peaks.head(num_peaks_cutoff)
 
-    peaks = peak_start_end(peaks, option)
-
+    if option == 'peak_summit':
+        peaks.drop_in_place('start')
+        peaks.with_columns((peaks.col('abs_summit')).alias('start'))
+        peaks.drop_in_place('end')
+        peaks.with_columns((peaks.col('abs_summit')).alias('end'))
+    elif option == 'artifical_peak_boundaries' and boundary is not None:
+        peaks.drop_in_place('start')
+        peaks.with_columns((peaks.col('abs_summit') - boundary).alias('start'))
+        peaks.drop_in_place('end')
+        peaks.with_columns((peaks.col('abs_summit') + boundary).alias('end'))
+    elif option == 'native_peak_boundaries':
+        pass
+    else:
+        raise ValueError('Invalid peak start/end option')
+    
     return peaks
 
 def process_input_SEACR(data, signal = None, option = 'native_peak_boundaries',
@@ -80,13 +109,6 @@ def process_input_SEACR(data, signal = None, option = 'native_peak_boundaries',
 
     if num_peaks_cutoff is not None:
         peaks = peaks.head(num_peaks_cutoff)
-
-    peaks = peak_start_end(peaks, option)
-
-    return peaks
-
-def peak_start_end(data, option):
-    peaks = data
 
     if option == 'peak_summit':
         peaks.drop_in_place('start')
@@ -106,14 +128,16 @@ def peak_start_end(data, option):
     return peaks
 
 def decompose_peaks(peaks):
-    return {'chr' + str(name[0]): group for name, group in peaks.group_by(['chr'])}
+    return {'chr' + str(name): group for name, group in peaks.group_by('chr')}
 
-def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name):
+def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name,
+               up_bound, down_bound):
     output = pl.DataFrame()
     for key in decomposed_peaks.keys():
         starts = pl.read_csv(ref_dir + species + "/" + feature_type + "/" + key + '_start.csv')
         ends = pl.read_csv(ref_dir + species + "/" + feature_type + "/" + key + '_end.csv')
-        output = pl.concat([output, get_nearest_features(decomposed_peaks[key], 'gene_name', starts, ends, num_features)])
+        output = pl.concat([output, get_nearest_features(decomposed_peaks[key], 'gene_name', starts, ends,
+                                                         up_bound, down_bound, num_features)])
 
     if not os.path.exists("results/"):
         os.mkdir("results/")
@@ -180,6 +204,6 @@ boundary = None
 for file in os.listdir(data_dir):
     # if "macs2" in file or "MACS2" in file:
     if "MACS2" in file:
-        peak2gene(data_dir + file, 'MACS2', "mm10", "gene", 3, ref_dir, file[:-4])
+        peak2gene(data_dir + file, 'MACS2', "mm10", "gene", 3, ref_dir, file[:-4], up_bound = 5000, down_bound = 5000)
     # if "seacr" in file or "SEACR" in file:
     #     peakScout(data_dir + file, 'SEACR', "mm10", "gene", 3, ref_dir, file[:-4])

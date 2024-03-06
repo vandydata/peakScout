@@ -1,9 +1,12 @@
 import polars as pl
 
-def get_nearest_features(roi, feature, starts, ends, k):
+def get_nearest_features(roi, feature, starts, ends, up_bound, down_bound, k):
     feature_starts = starts.select('start').to_numpy().flatten()
     feature_ends = ends.select('end').to_numpy().flatten()
     assert(len(feature_starts) == len(feature_ends))
+
+    start_features = starts.select(feature).to_numpy().flatten()
+    end_features = ends.select(feature).to_numpy().flatten()
 
     return_roi = None
     if 'name' in roi.columns:
@@ -21,40 +24,64 @@ def get_nearest_features(roi, feature, starts, ends, k):
     for peak in return_roi.iter_rows(named=True):
         peak_start = peak['start']
         peak_end = peak['end']
-        downstream_index = feature_starts.searchsorted(peak_start, side='left')
-        upstream_index = feature_ends.searchsorted(peak_end, side='right') - 1
+
+        downstream_start, downstream_bound, upstream_bound, upstream_end = constrain_features(feature_starts, feature_ends, 
+                                                                                              down_bound, up_bound,
+                                                                                              peak_start, peak_end)
+        
+        constrained_feature_starts = feature_starts[downstream_start : downstream_bound]
+        constrained_feature_ends = feature_ends[upstream_bound : upstream_end]
+
+        constrained_starts = start_features[downstream_start : downstream_bound]
+        constrained_ends = end_features[upstream_bound : upstream_end]
+
+        downstream_index = 0 #constrained_starts.searchsorted(peak_start, side='left')
+        upstream_index = len(constrained_ends) - 1 #constrained_ends.searchsorted(peak_end, side='right') - 1
+
+        assert(len(constrained_starts) == len(constrained_feature_starts))
+        assert(len(constrained_ends) == len (constrained_feature_ends))
+
         i = k
 
-        while i > 0 and upstream_index > -1 and downstream_index < len(starts):
-            downstream_dist = feature_starts[downstream_index] - peak_end
-            upstream_dist = peak_start - feature_ends[upstream_index]
+        while i > 0 and upstream_index > -1 and downstream_index < len(constrained_starts):
+            downstream_dist = constrained_feature_starts[downstream_index] - peak_end
+            upstream_dist = peak_start - constrained_feature_ends[upstream_index]
 
             downstream_dist = 0 if downstream_dist < 0 else downstream_dist
             upstream_dist = 0 if upstream_dist < 0 else upstream_dist
 
             if downstream_dist < upstream_dist:
-                features_to_add[k-i+1].append(starts.row(downstream_index, named=True)[feature])
+                features_to_add[k-i+1].append(constrained_starts[downstream_index])
                 dists_to_add[k-i+1].append(downstream_dist)
                 downstream_index += 1
             else:
-                features_to_add[k-i+1].append(ends.row(upstream_index, named=True)[feature])
+                features_to_add[k-i+1].append(constrained_ends[upstream_index])
                 dists_to_add[k-i+1].append(upstream_dist)
                 upstream_index -= 1
         
             i -= 1
         
         if i > 0 and upstream_index < 0:
-            while i > 0 and downstream_index < len(starts):
-                features_to_add[k-i+1].append(starts.row(downstream_index, named=True)[feature])
+            while i > 0 and downstream_index < len(constrained_starts):
+                features_to_add[k-i+1].append(constrained_starts[downstream_index])
+                downstream_dist = constrained_feature_starts[downstream_index] - peak_end
+                downstream_dist = 0 if downstream_dist < 0 else downstream_dist
                 dists_to_add[k-i+1].append(downstream_dist)
                 downstream_index += 1
                 i -= 1
-        elif i > 0 and downstream_index >= len(ends):
+        elif i > 0 and downstream_index >= len(constrained_ends):
             while i > 0 and upstream_index > -1:
-                features_to_add[k-i+1].append(ends.row(upstream_index, named=True)[feature])
+                features_to_add[k-i+1].append(constrained_ends[upstream_index])
+                upstream_dist = peak_start - constrained_feature_ends[upstream_index]
+                upstream_dist = 0 if upstream_dist < 0 else upstream_dist
                 dists_to_add[k-i+1].append(upstream_dist)
                 upstream_index -= 1
                 i -= 1
+        
+        while i > 0:
+            features_to_add[k-i+1].append("N/A")
+            dists_to_add[k-i+1].append(-1)
+            i -= 1
 
         index += 1
     
@@ -63,3 +90,19 @@ def get_nearest_features(roi, feature, starts, ends, k):
                                               pl.Series('closest_' + feature + '_' + str(i) + '_dist', dists_to_add[i])])
 
     return return_roi
+
+def constrain_features(feature_starts, feature_ends, down_bound, up_bound, peak_start, peak_end):
+    if down_bound is not None:
+        downstream_bound = feature_starts.searchsorted(peak_end + down_bound, side='right')
+    else:
+        downstream_bound = len(feature_starts)
+    
+    if up_bound is not None:
+        upstream_bound = feature_ends.searchsorted(peak_start - up_bound, side='left')
+    else:
+        upstream_bound = 0
+    
+    downstream_start = feature_starts.searchsorted(peak_start, side='left')
+    upstream_end = feature_ends.searchsorted(peak_end, side='right')
+
+    return downstream_start, downstream_bound, upstream_bound, upstream_end
