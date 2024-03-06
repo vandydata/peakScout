@@ -124,10 +124,12 @@ def gen_output(decomposed_peaks, decomposed_genes, species, feature_type, num_fe
     output = pl.DataFrame()
     for key in decomposed_genes.keys():
         if key in decomposed_peaks.keys():
-            print(decomposed_genes[key])
             starts = decomposed_peaks[key].select(['name', 'start'])
             ends = decomposed_peaks[key].select(['name', 'end'])
-            output = pl.concat([output, get_nearest_features(decomposed_genes[key], 'name', starts, ends, None, None, num_features)])
+        else:
+            starts = pl.DataFrame({}, schema=['name', 'start'])
+            ends = pl.DataFrame({}, schema=['name', 'end'])
+        output = pl.concat([output, get_nearest_features(decomposed_genes[key], 'name', starts, ends, None, None, num_features)])
             
     if not os.path.exists("results/"):
         os.mkdir("results/")
