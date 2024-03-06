@@ -69,7 +69,7 @@ def get_nearest_features(roi, feature, starts, ends, up_bound, down_bound, k):
                 dists_to_add[k-i+1].append(downstream_dist)
                 downstream_index += 1
                 i -= 1
-        elif i > 0 and downstream_index >= len(constrained_ends):
+        elif i > 0 and downstream_index >= len(constrained_starts):
             while i > 0 and upstream_index > -1:
                 features_to_add[k-i+1].append(constrained_ends[upstream_index])
                 upstream_dist = peak_start - constrained_feature_ends[upstream_index]
