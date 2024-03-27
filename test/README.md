@@ -1,8 +1,4 @@
-# Table of Contents
-
-[TOC]
-
-----
+# Test files
 
 ## Test file - gene annotation
 
