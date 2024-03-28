@@ -1,5 +1,13 @@
 # peakScout
 
+## Installation
+
+Steps from github install
+
+## Usage
+
+Couple of basic commands
+
 ## Notes
 
 Genomes to target: mm10, mm39, hg19, hg38
