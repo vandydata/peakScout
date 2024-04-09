@@ -19,7 +19,7 @@ jobs:
           python-version: '3.9.12'  
 
       - name: Install dependencies
-        run: pip install polars
+        run: pip install polars numpy
 
       - name: Remove previous tests
         working-directory: test
