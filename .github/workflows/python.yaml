@@ -1,5 +1,34 @@
 name: peakScout
 
-# on: [push]
+on:
+  push:
+    branches:
+      - main 
 
-# need to add some tests
+jobs:
+  compare-csv:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9.12'  
+
+      - name: Install dependencies
+        run: pip install polars
+
+      - name: Remove previous tests
+        working-directory: test
+        run: rm -rf results 
+
+      - name: Run test.py
+        working-directory: test
+        run: python test.py
+
+      - name: Compare CSV files
+        working-directory: test
+        run: python compare_csv.py
