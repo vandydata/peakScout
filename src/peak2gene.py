@@ -23,8 +23,9 @@ def peak2gene(file_path, peak_type, species, feature_type, num_features, ref_dir
         raise TypeError('Invalid peak type')
 
     if 'bed' in file_path:
-        peaks['start'] = peaks['start'] + 1
-        peaks['end'] = peaks['end'] + 1
+        peaks = peaks.with_columns(pl.col('start') + 1)
+        peaks = peaks.with_columns(pl.col('end') + 1)
+
     
     decomposed_peaks = decompose_peaks(peaks)
     gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name, up_bound,
@@ -37,13 +38,13 @@ def read_input_MACS2_xls(file_path):
     return peaks
 
 def read_input_MACS2_bed(file_path):
-    col_names = ['chr', 'start', 'end', 'name', 'score', 'ph']
-    peaks = pl.read_csv(file_path, header = False, separator = '\t', new_columns=col_names)
+    col_names = ['chr', 'start', 'end', 'name', 'signal', 'pvalue', 'qvalue', 'peak']
+    peaks = pl.read_csv(file_path, has_header= False, separator = '\t', new_columns=col_names[:5])
 
     return peaks
 
 def read_input_SEACR(file_path):
-    col_names = ['chr', 'start', 'end', 'name', 'max_signal', 'max_signal_region']
+    col_names = ['chr', 'start', 'end', 'name', 'score', 'region']
     peaks = pl.read_csv(file_path, separator = '\t', new_columns=col_names)
 
     return peaks
@@ -128,7 +129,8 @@ def process_input_SEACR(data, signal = None, option = 'native_peak_boundaries',
     return peaks
 
 def decompose_peaks(peaks):
-    return {'chr' + str(name): group for name, group in peaks.group_by('chr')}
+    return {'chr' + str(name[0]) if 'chr' not in str(name[0]) else str(name[0]): 
+            group for name, group in peaks.group_by(['chr'])}
 
 def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name,
                up_bound, down_bound):
@@ -143,7 +145,7 @@ def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, o
         os.mkdir("results/")
     
     output = output.to_pandas()
-    output = output.sort_values(by=['chr', 'name'])
+    output = output.sort_values(by=['chr', 'start'])
 
     with pd.ExcelWriter('results/' + output_name + '.xlsx', engine='openpyxl') as writer:
     
@@ -178,7 +180,7 @@ def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, o
         unique_chr_values = output['chr'].unique()
 
         filters = worksheet.auto_filter
-        filters.ref = "A1:A" + str(len(output) + 1)
+        filters.ref = "B1:B" + str(len(output) + 1)
         col = FilterColumn(colId=0)
         col.filters = Filters(filter=unique_chr_values.tolist())
         filters.filterColumn.append(col)
@@ -201,9 +203,12 @@ num_nearest_features = 3
 option = "native_peak_boundaries"
 boundary = None
 
-for file in os.listdir(data_dir):
-    # if "macs2" in file or "MACS2" in file:
-    if "MACS2" in file:
-        peak2gene(data_dir + file, 'MACS2', "mm10", "gene", 3, ref_dir, file[:-4], up_bound = 5000, down_bound = 5000)
-    # if "seacr" in file or "SEACR" in file:
-    #     peakScout(data_dir + file, 'SEACR', "mm10", "gene", 3, ref_dir, file[:-4])
+# for file in os.listdir(data_dir):
+#     # if "macs2" in file or "MACS2" in file:
+#     if "MACS2" in file:
+#         peak2gene(data_dir + file, 'MACS2', "mm10", "gene", 3, ref_dir, file[:-4], up_bound = 5000, down_bound = 5000)
+#     # if "seacr" in file or "SEACR" in file:
+#     #     peakScout(data_dir + file, 'SEACR', "mm10", "gene", 3, ref_dir, file[:-4])
+
+file = "MAFB_HI_87_1e-10_peaks.bed"
+peak2gene(data_dir + file, 'MACS2', "hg19", "gene", 1, ref_dir, file[:-4])
