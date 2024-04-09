@@ -139,3 +139,6 @@ decompose_gtf(ref_dir, "hg19", hg19_ref)
 hg38_ref = 'gencode.v45.annotation.gtf'
 decompose_gtf(ref_dir, "hg38", hg38_ref)
 
+test_ref = 'test.gtf'
+decompose_gtf(ref_dir, 'test', test_ref)
+
