@@ -286,7 +286,7 @@ def constrain_features(feature_starts, feature_ends, down_bound, up_bound, peak_
  
 # data information
 data_dir = "test/"
-ref_dir = "reference/"
+ref_dir = "test/test-reference/"
 
 # function parameters
 num_peaks_cutoff = None 
