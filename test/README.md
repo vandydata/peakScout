@@ -17,7 +17,7 @@ See `test_MACS2_expected_results.csv` or as shown below.
 
 For each of the `test_*.bed` files, the finding of nearest genes should be as follows:
 
-| (row number) | first   | second  | third   |
+| name | closest_gene_name_1   | closest_gene_name_2  | closest_gene_name_3   |
 | ------------ | ------- | ------- | ------- |
 | peak1        | Rp1     | Gm37483 | Gm6101  |
 | peak2        | Gm7182  | Gm37567 | Atp6v1h |
@@ -27,6 +27,6 @@ For each of the `test_*.bed` files, the finding of nearest genes should be as fo
 | peak6        | Olah    | Gm37525 | Acbd7   |
 | peak7        | Camk1d  | Gm13216 | Cdc123  |
 | peak8        | Celf2   | Gm24340 | Gm28641 |
-| peak9        | Gm30904 | Gm24534 | Gm13254 |
-| peak10       | Gm26478 | Gm13297 | Gm13264 |
+| peak9        | Gm24534 | Gm13254 | Gm13255 |
+| peak10       | Gm26478 | Gm13297 | Gm13294 |
 
