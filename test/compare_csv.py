@@ -1,4 +1,11 @@
 import csv
+import argparse
+
+def main(args):
+    actual = args.actual
+    expected = args.expected
+
+    compare_csv_files(actual, expected)
 
 def compare_csv_files(file1, file2):
     with open(file1, 'r') as f1, open(file2, 'r') as f2:
@@ -21,8 +28,14 @@ def compare_csv_files(file1, file2):
     else:
         raise Exception("CSV files different")
 
-actual_csv_file = "test/results/test_actual.csv"
-expected_csv_file = "test/test_MACS2_expected_results.csv"
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='peakScount: find nearest features')
 
-are_same, message = compare_csv_files(actual_csv_file, expected_csv_file)
-print(message)
+    parser.add_argument('--actual', '--a', type=str, help='Path to actual csv')
+    parser.add_argument('--expected', '--e', type=str, help='Path to expected csv')
+    
+
+    args = parser.parse_args()
+
+    main(args)
+
