@@ -7,9 +7,9 @@ python3 src/peakScout.py peak2gene \
     --k 3 \
     --ref_dir test/test-reference \
     --output_name test_MACS2 \
-    --o test/results \
+    --o test/ \
     --output_type csv
 
 python3 test/compare_csv.py \
-    --a test/results/test_MACS2.csv \
+    --a test/test_MACS2.csv \
     --e test/test_MACS2_expected_results.csv

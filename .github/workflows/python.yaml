@@ -6,7 +6,7 @@ on:
       - main 
 
 jobs:
-  compare-csv:
+  peak2gene:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,11 +19,11 @@ jobs:
           python-version: '3.9.12'  
 
       - name: Install dependencies
-        run: pip install polars numpy pandas
+        run: pip install polars numpy pandas openpyxl
 
       - name: Remove previous tests
         working-directory: test
-        run: rm -rf results 
+        run: rm test_MACS2.csv test_SEACR.csv
 
       - name: Test MACS2
         run: bash test/test_MACS2.sh
