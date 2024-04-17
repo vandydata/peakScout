@@ -1,5 +1,6 @@
 import argparse
 from peak2gene import peak2gene
+from decompose_ref import decompose_gtf
 
 def main(args):
     function = args.function
@@ -15,9 +16,12 @@ def main(args):
     boundary = args.boundary
     ub = args.up_bound
     db = args.down_bound
+    gtf_ref = args.gtf_ref
 
     if function == 'peak2gene':
         peak2gene(peak_file, peak_type, species, k, ref, output_name, out_dir, output_type, option, boundary, ub, db)
+    elif function == 'decompose':
+        decompose_gtf(ref, species, gtf_ref, out_dir)
     else:
         raise ValueError('Invalid peakScout call')
 
@@ -37,6 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--boundary', type=int, default = None, help='Boundary (default: None)')
     parser.add_argument('--up_bound', '--ub', default = None, type=int, help='Up bound (default: None)')
     parser.add_argument('--down_bound', '--db', default = None, type=int, help='Down bound (default: None)')
+    parser.add_argument('--gtf_ref', '--gtf', type=str, help='File path to gtf')
 
     args = parser.parse_args()
 
