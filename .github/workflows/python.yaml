@@ -6,7 +6,7 @@ on:
       - main 
 
 jobs:
-  peak2gene:
+  peakScout:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,8 +25,11 @@ jobs:
         working-directory: test
         run: bash remove_previous.sh
 
-      - name: Test MACS2
+      - name: Test decomposition
+        run: bash test/test_decomp.sh
+
+      - name: Test MACS2 peak2gene
         run: bash test/test_MACS2.sh
 
-      - name: Test SEACR
+      - name: Test SEACR peak2gene
         run: bash test/test_SEACR.sh
