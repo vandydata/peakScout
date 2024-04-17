@@ -1,153 +1,139 @@
 import pandas as pd
 import polars as pl
-import numpy as np
 import os
 from openpyxl.styles import PatternFill
 from openpyxl.worksheet.filters import FilterColumn, Filters
 from openpyxl.utils import get_column_letter
 from get_nearest_feature import get_nearest_features
+from process_input import process_input
 
-def peak2gene(file_path, peak_type, species, feature_type, num_features, ref_dir, output_name,
-              option = 'native_peak_boundaries', boundary = None, num_peaks_cutoff = None, 
-              up_bound = None, down_bound = None):
-    if peak_type == 'MACS2' and 'xls' in file_path:
-        peaks = read_input_MACS2_xls(file_path)
-        peaks = process_input_MACS2_xls(peaks)
-    elif peak_type == 'MACS2' and 'bed' in file_path:
-        peaks = read_input_MACS2_bed(file_path)
-        peaks = process_input_MACS2_bed(peaks)
-    elif peak_type == 'SEACR':
-        peaks = read_input_SEACR(file_path)
-        peaks = process_input_SEACR(peaks)
-    else:
-        raise TypeError('Invalid peak type')
+def peak2gene(peak_file: str,
+              peak_type: str, 
+              species: str, 
+              num_features: int, 
+              ref_dir: str, 
+              output_name: str,
+              out_dir: str, 
+              output_type: str,
+              option: str = 'native_peak_boundaries', 
+              boundary: int = None, 
+              up_bound: int = None, 
+              down_bound: int = None) -> None:
+    '''
+    Find the nearest genes for a given list of peaks.
 
-    if 'bed' in file_path:
-        peaks = peaks.with_columns(pl.col('start') + 1)
-        peaks = peaks.with_columns(pl.col('end') + 1)
+    Parameters:
+    peak_file (str): Path to the peak file.
+    peak_type (str): Type of peak caller used to generate peak file (e.g. MACS2, SEACR).
+    species (str): Species of the reference genome.
+    num_features (int): Number of nearest features to find.
+    ref_dir (str): Directory containing decomposed reference data.
+    output_name (str): Name for output file.
+    out_dir (str): Directory to output file.
+    output_type (str): Output type (csv file or xlsx file)
+    option (str): Option for defining start and end positions of peaks.
+    boundary (int): Boundary for artificial peak boundary option. None if other options. 
+    up_bound (int): Maximum allowed distance between peak and upstream feature.
+    down_bound (int): Maximum allowed distance between peak and downstream feature.
 
+    Returns:
+    None
+
+    Outputs:
+    Excel sheet containing peak data, the nearest k genes for each peak, and the distance
+    between those genes and the peak.
+    '''
     
+    peaks = process_input(peak_file, peak_type, option, boundary)
     decomposed_peaks = decompose_peaks(peaks)
-    gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name, up_bound,
-               down_bound)
-
-def read_input_MACS2_xls(file_path):
-    peaks = pl.read_csv(file_path, separator = '\t', skip_rows=22)
-    peaks = peaks.rename({'-log10(pvalue)': 'neg_log10_pvalue', '-log10(qvalue)': 'neg_log10_qvalue'})
-
-    return peaks
-
-def read_input_MACS2_bed(file_path):
-    col_names = ['chr', 'start', 'end', 'name', 'signal', 'pvalue', 'qvalue', 'peak']
-    peaks = pl.read_csv(file_path, has_header= False, separator = '\t', new_columns=col_names[:5])
-
-    return peaks
-
-def read_input_SEACR(file_path):
-    col_names = ['chr', 'start', 'end', 'name', 'score', 'region']
-    peaks = pl.read_csv(file_path, separator = '\t', new_columns=col_names)
-
-    return peaks
-
-def process_input_MACS2_xls(data, qval = None, option = 'native_peak_boundaries', 
-                  boundary = None, num_peaks_cutoff = None):
-    peaks = data
-    if qval is not None:
-        peaks = data.select(threshold = pl.when(data.col('neg_log10_qvalue') > -np.log10(qval)))
-        peaks = peaks.sort('neg_log10_qvalue', descending=True)
-
-    if num_peaks_cutoff is not None:
-        peaks = peaks.head(num_peaks_cutoff)
-
-    if option == 'peak_summit':
-        peaks.drop_in_place('start')
-        peaks.with_columns((peaks.col('abs_summit')).alias('start'))
-        peaks.drop_in_place('end')
-        peaks.with_columns((peaks.col('abs_summit')).alias('end'))
-    elif option == 'artifical_peak_boundaries' and boundary is not None:
-        peaks.drop_in_place('start')
-        peaks.with_columns((peaks.col('abs_summit') - boundary).alias('start'))
-        peaks.drop_in_place('end')
-        peaks.with_columns((peaks.col('abs_summit') + boundary).alias('end'))
-    elif option == 'native_peak_boundaries':
-        pass
+    output = find_nearest(decomposed_peaks, species, num_features, ref_dir, up_bound, down_bound)
+    if output_type == 'xlsx':
+        write_to_excel(output, output_name, out_dir)
+    elif output_type == 'csv':
+        write_to_csv(output, output_name, out_dir)
     else:
-        raise ValueError('Invalid peak start/end option')
-    
-    return peaks
+        raise ValueError('Invalid output type')
 
-def process_input_MACS2_bed(data, score = 0.05, option = 'native_peak_boundaries', 
-                  boundary = None, num_peaks_cutoff = None):
-    
-    peaks = data
+def decompose_peaks(peaks: pl.DataFrame) -> dict:
+    '''
+    Decompose peaks by chromosome.
 
-    if num_peaks_cutoff is not None:
-        peaks = peaks.head(num_peaks_cutoff)
+    Parameters:
+    peaks (pl.DataFrame): Polars DataFrame containing peak information.
 
-    if option == 'peak_summit':
-        peaks.drop_in_place('start')
-        peaks.with_columns((peaks.col('abs_summit')).alias('start'))
-        peaks.drop_in_place('end')
-        peaks.with_columns((peaks.col('abs_summit')).alias('end'))
-    elif option == 'artifical_peak_boundaries' and boundary is not None:
-        peaks.drop_in_place('start')
-        peaks.with_columns((peaks.col('abs_summit') - boundary).alias('start'))
-        peaks.drop_in_place('end')
-        peaks.with_columns((peaks.col('abs_summit') + boundary).alias('end'))
-    elif option == 'native_peak_boundaries':
-        pass
-    else:
-        raise ValueError('Invalid peak start/end option')
-    
-    return peaks
+    Returns:
+    decomposed_peaks (dict): Dictionary containing keys with chromosome number
+                             mapped to Polars DataFrames with peaks on that chromosome
 
-def process_input_SEACR(data, signal = None, option = 'native_peak_boundaries',
-                        boundary = None, num_peaks_cutoff = None):
-    peaks = data
-    if signal is not None:
-        peaks = data.select(threshold = pl.where(data.col('signal') > signal))
-    # peaks.sort_values(by = 'neg_log10_qvalue', ascending=False, inplace=True)
+    Outputs:
+    None
+    '''
 
-    if num_peaks_cutoff is not None:
-        peaks = peaks.head(num_peaks_cutoff)
-
-    if option == 'peak_summit':
-        peaks.drop_in_place('start')
-        peaks.with_columns((peaks.col('abs_summit')).alias('start'))
-        peaks.drop_in_place('end')
-        peaks.with_columns((peaks.col('abs_summit')).alias('end'))
-    elif option == 'artifical_peak_boundaries' and boundary is not None:
-        peaks.drop_in_place('start')
-        peaks.with_columns((peaks.col('abs_summit') - boundary).alias('start'))
-        peaks.drop_in_place('end')
-        peaks.with_columns((peaks.col('abs_summit') + boundary).alias('end'))
-    elif option == 'native_peak_boundaries':
-        pass
-    else:
-        raise ValueError('Invalid peak start/end option')
-    
-    return peaks
-
-def decompose_peaks(peaks):
     return {'chr' + str(name[0]) if 'chr' not in str(name[0]) else str(name[0]): 
             group for name, group in peaks.group_by(['chr'])}
 
-def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, output_name,
-               up_bound, down_bound):
+def find_nearest(decomposed_peaks: dict, 
+                 species: str, 
+                 num_features: int, 
+                 ref_dir: str, 
+                 up_bound: int, 
+                 down_bound: int) -> pd.DataFrame:
+    '''
+    Find the nearest genes for a given list of peaks. Place these in a Pandas DataFrame
+
+    Parameters:
+    decomposed_peaks (dict): Dictionary containing keys with chromosome number
+                             mapped to Polars DataFrames with peaks on that chromosome
+    species (str): Species of the reference genome.
+    num_features (int): Number of nearest features to find.
+    ref_dir (str): Directory containing decomposed reference data.
+    up_bound (int): Maximum allowed distance between peak and upstream feature.
+    down_bound (int): Maximum allowed distance between peak and downstream feature.
+
+    Returns:
+    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak, 
+    and the distance between those genes and the peak.
+
+    Outputs:
+    None
+    '''
+
     output = pl.DataFrame()
     for key in decomposed_peaks.keys():
-        starts = pl.read_csv(ref_dir + species + "/" + feature_type + "/" + key + '_start.csv')
-        ends = pl.read_csv(ref_dir + species + "/" + feature_type + "/" + key + '_end.csv')
+        starts = pl.read_csv(os.path.join(ref_dir, species, 'gene', key) + '_start.csv')
+        ends = pl.read_csv(os.path.join(ref_dir, species, 'gene', key) + '_end.csv')
         output = pl.concat([output, get_nearest_features(decomposed_peaks[key], 'gene_name', starts, ends,
                                                          up_bound, down_bound, num_features)])
-
-    if not os.path.exists("results/"):
-        os.mkdir("results/")
     
     output = output.to_pandas()
     output = output.sort_values(by=['chr', 'start'])
 
-    with pd.ExcelWriter('results/' + output_name + '.xlsx', engine='openpyxl') as writer:
+    return output
+ 
+def write_to_excel(output: pd.DataFrame, 
+                   output_name: str, 
+                   out_dir: str) -> None:
+    '''
+    Write output Pandas DataFrame to an Excel sheet
+
+    Parameters:
+    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak, 
+                           and the distance between those genes and the peak.
+    output_name (str): Name for output file.
+    out_dir (str): Directory to output file.
+
+    Returns:
+    None
+
+    Outputs:
+    Excel sheet containing peak data, the nearest k genes for each peak, and the distance
+    between those genes and the peak.
+    '''
+
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    with pd.ExcelWriter(os.path.join(out_dir, output_name) + '.xlsx', engine='openpyxl') as writer:
     
         output.to_excel(writer, sheet_name='Sheet1', index=False)
 
@@ -185,30 +171,43 @@ def gen_output(decomposed_peaks, species, feature_type, num_features, ref_dir, o
         col.filters = Filters(filter=unique_chr_values.tolist())
         filters.filterColumn.append(col)
 
-        # Save the Excel file
-        workbook.save('results/' + output_name + '.xlsx')
- 
+        workbook.save(os.path.join(out_dir, output_name) + '.xlsx')
+
+def write_to_csv(output: pd.DataFrame, 
+                 output_name: str,
+                 out_dir: str) -> None:
+    '''
+    Write output Pandas DataFrame to an CSV file
+
+    Parameters:
+    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak, 
+                           and the distance between those genes and the peak.
+    output_name (str): Name for output file.
+    out_dir (str): Directory to output file.
+
+    Returns:
+    None
+
+    Outputs:
+    CSV file containing peak data, the nearest k genes for each peak, and the distance
+    between those genes and the peak.
+    '''
+
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+
+    output.to_csv(os.path.join(out_dir, output_name) + '.csv', index=False)
+    
 # data information
-data_dir = "test/"
-ref_dir = "reference/"
+# data_dir = "test/"
+# ref_dir = "reference/"
 
-# function parameters
-num_peaks_cutoff = None 
-num_nearest_features = 3
+# # function parameters
+# num_peaks_cutoff = None 
+# num_nearest_features = 3
 
-# Set peak boundary options
-# a. "native_peak_boundaries" - use start + end of peak, as defined by peak caller
-# b. "peak_summit" - use peak summit
-# c. "artificial_peak_boundaries" - use artificial boundary, such as +/-100 bp from peak summit
-option = "native_peak_boundaries"
-boundary = None
+# option = "native_peak_boundaries"
+# boundary = None
 
-# for file in os.listdir(data_dir):
-#     # if "macs2" in file or "MACS2" in file:
-#     if "MACS2" in file:
-#         peak2gene(data_dir + file, 'MACS2', "mm10", "gene", 3, ref_dir, file[:-4], up_bound = 5000, down_bound = 5000)
-#     # if "seacr" in file or "SEACR" in file:
-#     #     peakScout(data_dir + file, 'SEACR', "mm10", "gene", 3, ref_dir, file[:-4])
-
-file = "MAFB_HI_87_1e-10_peaks.bed"
-peak2gene(data_dir + file, 'MACS2', "hg19", "gene", 1, ref_dir, file[:-4])
+# file = "test_MACS2.bed"
+# peak2gene(data_dir + file, 'MACS2', "test", 3, ref_dir, file[:-4], 'results')
