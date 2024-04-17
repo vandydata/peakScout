@@ -1,0 +1,15 @@
+#! /bin/bash
+
+python3 ../src/peakScout.py peak2gene \
+    --peak_file ../test/test_SEACR.bed \
+    --peak_type SEACR \
+    --species test \
+    --k 3 \
+    --ref_dir test-reference \
+    --output_name test_SEACR \
+    --o results \
+    --output_type csv
+
+python3 compare_csv.py \
+    --a ../test/results/test_SEACR.csv \
+    --e ../test/test_SEACR_expected_results.csv
