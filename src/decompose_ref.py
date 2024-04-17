@@ -1,7 +1,9 @@
 import polars as pl
 import os
 
-def decompose_gtf(ref_dir: str, species: str, gtf_ref: str):
+def decompose_gtf(ref_dir: str, 
+                  species: str, 
+                  gtf_ref: str) -> None:
     '''
     Decompose a GTF file into its various features (i.e. gene, CDS, exon, etc.).
     Each feature is further decomposed by chromosome, and the start and end 
@@ -48,7 +50,10 @@ def decompose_gtf(ref_dir: str, species: str, gtf_ref: str):
                               for chr_name, chr_group in decomposed_dfs_start.items()}
         save_csvs(ref_dir, decomposed_dfs_end, species, 'end')
 
-def save_csvs(ref_dir: str, df: pl.DataFrame, species: str, col: str):
+def save_csvs(ref_dir: str, 
+              df: pl.DataFrame, 
+              species: str, 
+              col: str) -> None:
     '''
     Save a given Polars DataFrame as a CSV file.
 
@@ -72,8 +77,8 @@ def save_csvs(ref_dir: str, df: pl.DataFrame, species: str, col: str):
     (and can include non-autosomes such as X, Y, and non-nuclear chromosomes such as M), and 
     start or end indicates that this CSV contains the features sorted by either start or end
     position, respectively. 
-
     '''
+
     for name, group in df.items():
         chr = name[0]
         type_name = name[1]
@@ -83,7 +88,7 @@ def save_csvs(ref_dir: str, df: pl.DataFrame, species: str, col: str):
         group.write_csv(os.path.join(ref_dir, species, type_name, chr + '_' + col + '.csv')) 
         print(name)
 
-def split_jumble(df: pl.DataFrame):
+def split_jumble(df: pl.DataFrame) -> pl.DataFrame:
     '''
     Splits the attribute column of the GTF and inserts them into the given Polars
     DataFrame as additional columns. After inserting all columns, the attribute 
@@ -99,6 +104,7 @@ def split_jumble(df: pl.DataFrame):
     Outputs:
     None
     '''
+
     jumble_data = df.select('attribute')
 
     unique_keys = set()
