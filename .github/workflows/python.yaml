@@ -25,9 +25,9 @@ jobs:
         working-directory: test
         run: rm -rf results 
 
-      - name: Run test.sh
-        working-directory:  test
-        run: bash test.sh
+      - name: Test MACS2
+        working-directory: test
+        run: bash test_MACS2.sh
 
-      - name: Compare CSV files
-        run: python test/compare_csv.py
+      - name: Test SEACR
+        run: bash test_SEACR.sh
