@@ -19,15 +19,14 @@ jobs:
           python-version: '3.9.12'  
 
       - name: Install dependencies
-        run: pip install polars numpy
+        run: pip install polars numpy pandas
 
       - name: Remove previous tests
         working-directory: test
         run: rm -rf results 
 
       - name: Test MACS2
-        working-directory: test
-        run: bash test_MACS2.sh
+        run: bash test/test_MACS2.sh
 
       - name: Test SEACR
-        run: bash test_SEACR.sh
+        run: bash test/test_SEACR.sh
