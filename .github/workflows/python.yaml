@@ -25,8 +25,9 @@ jobs:
         working-directory: test
         run: rm -rf results 
 
-      - name: Run test.py
-        run: python test/test.py
+      - name: Run test.sh
+        working-directory:  test
+        run: bash test.sh
 
       - name: Compare CSV files
         run: python test/compare_csv.py
