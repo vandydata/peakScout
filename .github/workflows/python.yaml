@@ -23,7 +23,7 @@ jobs:
 
       - name: Remove previous tests
         working-directory: test
-        run: rm test_MACS2.csv test_SEACR.csv
+        run: bash remove_previous.sh
 
       - name: Test MACS2
         run: bash test/test_MACS2.sh
