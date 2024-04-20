@@ -218,8 +218,8 @@ def find_overlaps(peak_start: int,
     None
     '''
     for gene in overlap_features:
-            if not check_overlap(peak_start, peak_end, starts, overlap_index):
-                overlap_features.remove(gene)
+        if not check_overlap(peak_start, peak_end, starts, gene):
+            overlap_features.remove(gene)
 
     while len(starts) > overlap_index and starts[overlap_index][0] <= peak_end:
         if check_overlap(peak_start, peak_end, starts, overlap_index):
