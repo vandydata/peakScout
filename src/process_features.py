@@ -310,3 +310,21 @@ def update_to_add(add_features: dict,
     '''
     add_features[add_index].append(features[feature_index])
     add_dists[add_index].append(str(dist))
+
+def decompose_features(features: pl.DataFrame) -> dict:
+    '''
+    Decompose features by chromosome.
+
+    Parameters:
+    features (pl.DataFrame): Polars DataFrame containing feature information.
+
+    Returns:
+    decomposed_features (dict): Dictionary containing keys with chromosome number
+                                mapped to Polars DataFrames with features on that chromosome
+
+    Outputs:
+    None
+    '''
+
+    return {'chr' + str(name[0]) if 'chr' not in str(name[0]) else str(name[0]): 
+            group for name, group in features.group_by(['chr'])}
