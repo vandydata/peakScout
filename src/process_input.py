@@ -1,6 +1,7 @@
 import polars as pl
+import os
 
-def process_input(file_path: str, 
+def process_peaks(file_path: str, 
                   peak_type: str,
                   option: str, 
                   boundary: int) -> pl.DataFrame:
@@ -135,3 +136,23 @@ def edit_peaks(peaks: pl.DataFrame,
         raise ValueError('Invalid peak start/end option')
     
     return peaks
+
+def process_genes(file_path: str,
+                  species: str,
+                  ref_dir: str) -> pl.DataFrame:
+    genes = pl.read_csv(file_path, has_header = False).to_numpy()[:, 0].tolist()
+    gene_df = pl.DataFrame()
+    for csv in os.listdir(os.path.join(ref_dir, species, 'gene')):
+        cur = pl.read_csv(os.path.join(ref_dir, species, 'gene', csv))
+        for gene in genes:
+            if gene in cur.select(['gene_name']).to_numpy():
+                gene_df = pl.concat([gene_df, cur.filter(pl.col("gene_name") == gene)])
+                genes.remove(gene)
+    
+    if genes:
+        raise ValueError(genes[0] + " is not a valid gene.")
+
+    gene_df = gene_df.rename({'gene_name': 'name'})
+
+    return gene_df
+    
