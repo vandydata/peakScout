@@ -94,19 +94,19 @@ def find_nearest(decomposed_peaks: dict,
     return output
 
 
-# data information
-data_dir = "test/"
-ref_dir = "reference/"
+# # data information
+# data_dir = "test/"
+# ref_dir = "reference/"
 
-# function parameters
-num_peaks_cutoff = None 
-num_nearest_features = 3
+# # function parameters
+# num_peaks_cutoff = None 
+# num_nearest_features = 3
 
-# Set peak boundary options
-# a. "native_peak_boundaries" - use start + end of peak, as defined by peak caller
-# b. "peak_summit" - use peak summit
-# c. "artificial_peak_boundaries" - use artificial boundary, such as +/-100 bp from peak summit
-option = "native_peak_boundaries"
-boundary = None
+# # Set peak boundary options
+# # a. "native_peak_boundaries" - use start + end of peak, as defined by peak caller
+# # b. "peak_summit" - use peak summit
+# # c. "artificial_peak_boundaries" - use artificial boundary, such as +/-100 bp from peak summit
+# option = "native_peak_boundaries"
+# boundary = None
 
-gene2peak(data_dir + 'gene_to_find.csv', data_dir + 'MACS2_peaks.xls', 'MACS2', "mm10", "name", 3, ref_dir, 'gene_to_find')
+# gene2peak(data_dir + 'gene_to_find.csv', data_dir + 'MACS2_peaks.xls', 'MACS2', "mm10", "name", 3, ref_dir, 'gene_to_find')
