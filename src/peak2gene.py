@@ -1,11 +1,9 @@
 import pandas as pd
 import polars as pl
 import os
-from openpyxl.styles import PatternFill
-from openpyxl.worksheet.filters import FilterColumn, Filters
-from openpyxl.utils import get_column_letter
-from get_nearest_feature import get_nearest_features
-from process_input import process_input
+from process_features import get_nearest_features, decompose_features
+from process_input import process_peaks
+from write_output import write_to_csv, write_to_excel
 
 def peak2gene(peak_file: str,
               peak_type: str, 
@@ -44,8 +42,8 @@ def peak2gene(peak_file: str,
     between those genes and the peak.
     '''
     
-    peaks = process_input(peak_file, peak_type, option, boundary)
-    decomposed_peaks = decompose_peaks(peaks)
+    peaks = process_peaks(peak_file, peak_type, option, boundary)
+    decomposed_peaks = decompose_features(peaks)
     output = find_nearest(decomposed_peaks, species, num_features, ref_dir, up_bound, down_bound)
     if output_type == 'xlsx':
         write_to_excel(output, output_name, out_dir)
@@ -54,24 +52,6 @@ def peak2gene(peak_file: str,
     else:
         raise ValueError('Invalid output type')
 
-def decompose_peaks(peaks: pl.DataFrame) -> dict:
-    '''
-    Decompose peaks by chromosome.
-
-    Parameters:
-    peaks (pl.DataFrame): Polars DataFrame containing peak information.
-
-    Returns:
-    decomposed_peaks (dict): Dictionary containing keys with chromosome number
-                             mapped to Polars DataFrames with peaks on that chromosome
-
-    Outputs:
-    None
-    '''
-
-    return {'chr' + str(name[0]) if 'chr' not in str(name[0]) else str(name[0]): 
-            group for name, group in peaks.group_by(['chr'])}
-
 def find_nearest(decomposed_peaks: dict, 
                  species: str, 
                  num_features: int, 
@@ -79,7 +59,7 @@ def find_nearest(decomposed_peaks: dict,
                  up_bound: int, 
                  down_bound: int) -> pd.DataFrame:
     '''
-    Find the nearest genes for a given list of peaks. Place these in a Pandas DataFrame
+    Find the nearest genes for a given list of peaks. Place these in a Pandas DataFrame.
 
     Parameters:
     decomposed_peaks (dict): Dictionary containing keys with chromosome number
@@ -109,94 +89,6 @@ def find_nearest(decomposed_peaks: dict,
     output = output.sort_values(by=['chr', 'start'])
 
     return output
- 
-def write_to_excel(output: pd.DataFrame, 
-                   output_name: str, 
-                   out_dir: str) -> None:
-    '''
-    Write output Pandas DataFrame to an Excel sheet
-
-    Parameters:
-    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak, 
-                           and the distance between those genes and the peak.
-    output_name (str): Name for output file.
-    out_dir (str): Directory to output file.
-
-    Returns:
-    None
-
-    Outputs:
-    Excel sheet containing peak data, the nearest k genes for each peak, and the distance
-    between those genes and the peak.
-    '''
-
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-
-    with pd.ExcelWriter(os.path.join(out_dir, output_name) + '.xlsx', engine='openpyxl') as writer:
-    
-        output.to_excel(writer, sheet_name='Sheet1', index=False)
-
-        workbook = writer.book
-        worksheet = writer.sheets['Sheet1']
-
-        for row_num in range(2, len(output) + 2):
-            if row_num % 2 == 0:
-                for col_num in range(1, output.shape[1] + 1):
-                    cell = worksheet.cell(row=row_num, column=col_num)
-                    cell.fill = PatternFill(start_color='E6E6E6', end_color='E6E6E6', fill_type='solid')
-            else:
-                for col_num in range(1, output.shape[1] + 1):
-                    cell = worksheet.cell(row=row_num, column=col_num)
-                    cell.fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
-
-        for column in worksheet.columns:
-            max_length = 0
-            column = [cell for cell in column]
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = (max_length + 2)
-            worksheet.column_dimensions[get_column_letter(column[0].column)].width = adjusted_width
-
-
-        unique_chr_values = output['chr'].unique()
-
-        filters = worksheet.auto_filter
-        filters.ref = "B1:B" + str(len(output) + 1)
-        col = FilterColumn(colId=0)
-        col.filters = Filters(filter=unique_chr_values.tolist())
-        filters.filterColumn.append(col)
-
-        workbook.save(os.path.join(out_dir, output_name) + '.xlsx')
-
-def write_to_csv(output: pd.DataFrame, 
-                 output_name: str,
-                 out_dir: str) -> None:
-    '''
-    Write output Pandas DataFrame to an CSV file
-
-    Parameters:
-    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak, 
-                           and the distance between those genes and the peak.
-    output_name (str): Name for output file.
-    out_dir (str): Directory to output file.
-
-    Returns:
-    None
-
-    Outputs:
-    CSV file containing peak data, the nearest k genes for each peak, and the distance
-    between those genes and the peak.
-    '''
-
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
-
-    output.to_csv(os.path.join(out_dir, output_name) + '.csv', index=False)
     
 # data information
 # data_dir = "test/"
