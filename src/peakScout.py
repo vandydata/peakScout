@@ -1,11 +1,13 @@
 import argparse
 from peak2gene import peak2gene
+from gene2peak import gene2peak
 from decompose_ref import decompose_gtf
 
 def main(args):
     function = args.function
     peak_file = args.peak_file
     peak_type = args.peak_type
+    gene_file = args.gene_file
     species = args.species
     k = args.num_features
     ref = args.ref_dir
@@ -22,6 +24,8 @@ def main(args):
         peak2gene(peak_file, peak_type, species, k, ref, output_name, out_dir, output_type, option, boundary, ub, db)
     elif function == 'decompose':
         decompose_gtf(ref, species, gtf_ref, out_dir)
+    elif function == 'gene2peak':
+        gene2peak(peak_file, peak_type, gene_file, species, k, ref, output_name, out_dir, output_type, option, boundary)
     else:
         raise ValueError('Invalid peakScout call')
 
@@ -31,6 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('function', type=str, help='Function to run')
     parser.add_argument('--peak_file', type=str, help='Peak file')
     parser.add_argument('--peak_type', type=str, help='Peak type')
+    parser.add_argument('--gene_file', type=str, help='Gene file')
     parser.add_argument('--species', type=str, help='Species')
     parser.add_argument('--num_features', '--k', type=int, help='Number of features')
     parser.add_argument('--ref_dir', type=str, help='Reference directory')
