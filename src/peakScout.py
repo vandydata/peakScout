@@ -26,7 +26,7 @@ def main(args):
         raise ValueError('Invalid peakScout call')
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='peakScount: find nearest features')
+    parser = argparse.ArgumentParser(description='peakScout: find nearest features')
 
     parser.add_argument('function', type=str, help='Function to run')
     parser.add_argument('--peak_file', type=str, help='Peak file')
