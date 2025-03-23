@@ -21,6 +21,13 @@ jobs:
       - name: Install dependencies
         run: pip install polars numpy pandas openpyxl pyarrow
 
+      - name: Create executable
+        working-directory: src
+        run: chmod +x peakScout
+
+      - name: Add script directory to PATH
+        run: echo "${{ github.workspace }}/src" >> $GITHUB_PATH
+
       - name: Remove previous tests
         working-directory: test
         run: bash remove_previous.sh

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import argparse
 from peak2gene import peak2gene
 from gene2peak import gene2peak
@@ -23,7 +25,7 @@ def main(args):
     if function == 'peak2gene':
         peak2gene(peak_file, peak_type, species, k, ref, output_name, out_dir, output_type, option, boundary, ub, db)
     elif function == 'decompose':
-        decompose_gtf(ref, species, gtf_ref, out_dir)
+        decompose_gtf(ref, species, gtf_ref)
     elif function == 'gene2peak':
         gene2peak(peak_file, peak_type, gene_file, species, k, ref, output_name, out_dir, output_type, option, boundary)
     else:

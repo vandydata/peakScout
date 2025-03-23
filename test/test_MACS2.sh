@@ -1,6 +1,6 @@
 #! /bin/bash
 
-python3 src/peakScout.py peak2gene \
+peakScout peak2gene \
     --peak_file test/test_MACS2.bed \
     --peak_type MACS2 \
     --species test \

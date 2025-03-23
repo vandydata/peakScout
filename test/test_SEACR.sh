@@ -1,6 +1,6 @@
 #! /bin/bash
 
-python3 src/peakScout.py peak2gene \
+peakScout peak2gene \
     --peak_file test/test_SEACR.bed \
     --peak_type SEACR \
     --species test \
