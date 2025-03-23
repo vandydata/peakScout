@@ -80,10 +80,14 @@ def find_nearest(decomposed_peaks: dict,
 
     output = pl.DataFrame()
     for key in decomposed_peaks.keys():
-        starts = pl.read_csv(os.path.join(ref_dir, species, 'gene', key) + '_start.csv')
-        ends = pl.read_csv(os.path.join(ref_dir, species, 'gene', key) + '_end.csv')
-        output = pl.concat([output, get_nearest_features(decomposed_peaks[key], 'gene_name', starts, ends,
-                                                         up_bound, down_bound, num_features)])
+        try:
+            starts = pl.read_csv(os.path.join(ref_dir, species, 'gene', key) + '_start.csv')
+            ends = pl.read_csv(os.path.join(ref_dir, species, 'gene', key) + '_end.csv')
+            output = pl.concat([output, get_nearest_features(decomposed_peaks[key], 'gene_name', starts, ends,
+                                                            up_bound, down_bound, num_features)])
+        except:
+            print(f"Warning: could not find feature information for chromosome {key}. \
+                  Results for these peaks are not included in the output.")
     
     output = output.to_pandas()
     output = output.sort_values(by=['chr', 'start'])
