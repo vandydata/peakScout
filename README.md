@@ -47,7 +47,7 @@ peakScout peak2gene --peak_file /path/to/peak/file --peak_type MACS2/SEACR --spe
 ### Finding Nearest Peaks
 Once a reference GTF has been decomposed, you can use the decomposition to find the nearest peaks to a set of genes. Peak files can be MACS2 or SEACR outputs and can be Excel sheets or BED files. Gene names should be in a single column CSV file with no header.
 
-Run the following command to create an Excel sheet containing the nearest k genes to your peaks
+Run the following command to create an Excel sheet containing the nearest k peaks to your genes
 ```bash
 peakScout gene2peak --peak_file /path/to/peak/file --peak_type MACS2/SEACR --gene_file /path/to/gene/file --species species of gtf --k number of nearest peaks --ref_dir /path/to/reference/directory --output_name name of output file --o /path/to/save/output --output_type csv/xslx
 ```
