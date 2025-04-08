@@ -36,11 +36,11 @@ graph TD
     end
     
     %% Function relationships
-    decompose -.->|decompose_gtf()| feature_data[Organized Feature Data]
-    process_input -.->|process_peaks()| standardized_peaks[Standardized Peak Data]
-    process_features -.->|find_nearest()| nearest_features[Nearest Features]
-    peak2gene -.->|find_nearest()| peak_to_gene_mapping[Peak→Gene Mapping]
-    gene2peak -.->|find_nearest()| gene_to_peak_mapping[Gene→Peak Mapping]
+    decompose -. "decompose_gtf()" .-> feature_data[Organized Feature Data]
+    process_input -. "process_peaks()" .-> standardized_peaks[Standardized Peak Data]
+    process_features -. "find_nearest()" .-> nearest_features[Nearest Features]
+    peak2gene -. "find_nearest()" .-> peak_to_gene_mapping[Peak→Gene Mapping]
+    gene2peak -. "find_nearest()" .-> gene_to_peak_mapping[Gene→Peak Mapping]
     
     %% Style
     classDef core fill:#f9f,stroke:#333,stroke-width:2px;
