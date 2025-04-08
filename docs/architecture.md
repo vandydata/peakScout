@@ -19,9 +19,9 @@ graph TD
     gene2peak --> write_output
     
     %% Data flow
-    input_files[Input Files\nMACS2/SEACR/BED] --> process_input
-    ref_files[Reference Files\nGTF] --> decompose
-    write_output --> results[Results\nCSV/Excel]
+    input_files[Input Files<br>MACS2/SEACR/BED] --> process_input
+    ref_files[Reference Files<br>GTF] --> decompose
+    write_output --> results[Results<br>CSV/Excel]
     
     %% Subcomponents and relationships
     subgraph "Core Analysis"
