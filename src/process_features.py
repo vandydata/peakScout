@@ -326,5 +326,9 @@ def decompose_features(features: pl.DataFrame) -> dict:
     None
     '''
 
-    return {'chr' + str(name[0]) if 'chr' not in str(name[0]) else str(name[0]): 
-            group for name, group in features.group_by(['chr'])}
+    decomposed_feat =  {'chr' + str(name[0]) if 'chr' not in str(name[0]) else str(name[0]): 
+                        group for name, group in features.group_by(['chr'])}
+    for key in decomposed_feat:
+        decomposed_feat[key] = decomposed_feat[key].sort('start')
+    
+    return decomposed_feat
