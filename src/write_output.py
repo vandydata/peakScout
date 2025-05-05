@@ -4,14 +4,13 @@ from openpyxl.styles import PatternFill
 from openpyxl.worksheet.filters import FilterColumn, Filters
 from openpyxl.utils import get_column_letter
 
-def write_to_excel(output: pd.DataFrame, 
-                   output_name: str, 
-                   out_dir: str) -> None:
-    '''
+
+def write_to_excel(output: pd.DataFrame, output_name: str, out_dir: str) -> None:
+    """
     Write output Pandas DataFrame to an Excel sheet
 
     Parameters:
-    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak, 
+    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak,
                            and the distance between those genes and the peak.
     output_name (str): Name for output file.
     out_dir (str): Directory to output file.
@@ -22,27 +21,33 @@ def write_to_excel(output: pd.DataFrame,
     Outputs:
     Excel sheet containing peak data, the nearest k genes for each peak, and the distance
     between those genes and the peak.
-    '''
+    """
 
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
-    with pd.ExcelWriter(os.path.join(out_dir, output_name) + '.xlsx', engine='openpyxl') as writer:
-    
-        output.to_excel(writer, sheet_name='Sheet1', index=False)
+    with pd.ExcelWriter(
+        os.path.join(out_dir, output_name) + ".xlsx", engine="openpyxl"
+    ) as writer:
+
+        output.to_excel(writer, sheet_name="Sheet1", index=False)
 
         workbook = writer.book
-        worksheet = writer.sheets['Sheet1']
+        worksheet = writer.sheets["Sheet1"]
 
         for row_num in range(2, len(output) + 2):
             if row_num % 2 == 0:
                 for col_num in range(1, output.shape[1] + 1):
                     cell = worksheet.cell(row=row_num, column=col_num)
-                    cell.fill = PatternFill(start_color='E6E6E6', end_color='E6E6E6', fill_type='solid')
+                    cell.fill = PatternFill(
+                        start_color="E6E6E6", end_color="E6E6E6", fill_type="solid"
+                    )
             else:
                 for col_num in range(1, output.shape[1] + 1):
                     cell = worksheet.cell(row=row_num, column=col_num)
-                    cell.fill = PatternFill(start_color='FFFFFF', end_color='FFFFFF', fill_type='solid')
+                    cell.fill = PatternFill(
+                        start_color="FFFFFF", end_color="FFFFFF", fill_type="solid"
+                    )
 
         for column in worksheet.columns:
             max_length = 0
@@ -53,11 +58,12 @@ def write_to_excel(output: pd.DataFrame,
                         max_length = len(str(cell.value))
                 except:
                     pass
-            adjusted_width = (max_length + 2)
-            worksheet.column_dimensions[get_column_letter(column[0].column)].width = adjusted_width
+            adjusted_width = max_length + 2
+            worksheet.column_dimensions[get_column_letter(column[0].column)].width = (
+                adjusted_width
+            )
 
-
-        unique_chr_values = output['chr'].unique()
+        unique_chr_values = output["chr"].unique()
 
         filters = worksheet.auto_filter
         filters.ref = "B1:B" + str(len(output) + 1)
@@ -65,16 +71,15 @@ def write_to_excel(output: pd.DataFrame,
         col.filters = Filters(filter=unique_chr_values.tolist())
         filters.filterColumn.append(col)
 
-        workbook.save(os.path.join(out_dir, output_name) + '.xlsx')
+        workbook.save(os.path.join(out_dir, output_name) + ".xlsx")
 
-def write_to_csv(output: pd.DataFrame, 
-                 output_name: str,
-                 out_dir: str) -> None:
-    '''
+
+def write_to_csv(output: pd.DataFrame, output_name: str, out_dir: str) -> None:
+    """
     Write output Pandas DataFrame to an CSV file
 
     Parameters:
-    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak, 
+    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak,
                            and the distance between those genes and the peak.
     output_name (str): Name for output file.
     out_dir (str): Directory to output file.
@@ -85,9 +90,9 @@ def write_to_csv(output: pd.DataFrame,
     Outputs:
     CSV file containing peak data, the nearest k genes for each peak, and the distance
     between those genes and the peak.
-    '''
+    """
 
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
-    output.to_csv(os.path.join(out_dir, output_name) + '.csv', index=False)
+    output.to_csv(os.path.join(out_dir, output_name) + ".csv", index=False)
