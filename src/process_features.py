@@ -55,9 +55,6 @@ def get_nearest_features(roi: pl.DataFrame,
                                                                                         start_features, end_features, 
                                                                                         up_bound, down_bound)
 
-        ds_index = 0
-        us_index = len(c_end_features) - 1
-
         assert(len(c_start_features) == len(c_starts_sub))
         assert(len(c_end_features) == len (c_ends_sub))
 
@@ -71,6 +68,9 @@ def get_nearest_features(roi: pl.DataFrame,
             update_to_add(features_to_add, dists_to_add, c_start_features, 0, k-i+1, overlap_features[overlap_ctr])
             overlap_ctr += 1
             i -= 1
+        
+        ds_index = overlap_index
+        us_index = len(c_end_features) - 1
 
         while i > 0 and us_index > -1 and ds_index < len(c_start_features):
             ds_dist = max(0, c_starts_sub[ds_index][0] - peak_end)
