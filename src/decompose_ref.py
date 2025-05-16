@@ -31,7 +31,7 @@ def decompose_gtf(ref_dir: str, species: str, gtf_ref: str) -> None:
     """
 
     if not os.path.exists(os.path.join(ref_dir, species)):
-        os.mkdir(os.path.join(ref_dir, species), exists_ok=True)
+        os.makedirs(os.path.join(ref_dir, species), exist_ok=True)
 
     col_names = [
         "chr",
