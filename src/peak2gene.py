@@ -19,6 +19,8 @@ def peak2gene(
     boundary: int = None,
     up_bound: int = None,
     down_bound: int = None,
+    consensus: bool = False,
+    preserve: bool = False,
 ) -> None:
     """
     Find the nearest genes for a given list of peaks.
@@ -36,6 +38,8 @@ def peak2gene(
     boundary (int): Boundary for artificial peak boundary option. None if other options.
     up_bound (int): Maximum allowed distance between peak and upstream feature.
     down_bound (int): Maximum allowed distance between peak and downstream feature.
+    consnsesus (bool): Whether to use consensus peaks.
+    preserve (bool): Whether to preserve the original file columns.
 
     Returns:
     None
@@ -45,10 +49,10 @@ def peak2gene(
     between those genes and the peak.
     """
 
-    peaks = process_peaks(peak_file, peak_type, option, boundary)
+    peaks = process_peaks(peak_file, peak_type, option, boundary, consensus)
     decomposed_peaks = decompose_features(peaks)
     output = find_nearest(
-        decomposed_peaks, species, num_features, ref_dir, up_bound, down_bound
+        decomposed_peaks, species, num_features, ref_dir, up_bound, down_bound, preserve
     )
     if output_type == "xlsx":
         write_to_excel(output, output_name, out_dir)
@@ -65,6 +69,7 @@ def find_nearest(
     ref_dir: str,
     up_bound: int,
     down_bound: int,
+    preserve: bool,
 ) -> pd.DataFrame:
     """
     Find the nearest genes for a given list of peaks. Place these in a Pandas DataFrame.
@@ -104,6 +109,7 @@ def find_nearest(
                         up_bound,
                         down_bound,
                         num_features,
+                        preserve,
                     ),
                 ]
             )

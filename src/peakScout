@@ -22,6 +22,8 @@ def main(args):
     ub = args.up_bound
     db = args.down_bound
     gtf_ref = args.gtf_ref
+    consensus = args.consensus
+    preserve = args.preserve
 
     if function == "peak2gene":
         peak2gene(
@@ -37,6 +39,8 @@ def main(args):
             boundary,
             ub,
             db,
+            consensus,
+            preserve
         )
     elif function == "decompose":
         decompose_gtf(ref, species, gtf_ref)
@@ -53,6 +57,7 @@ def main(args):
             output_type,
             option,
             boundary,
+            consensus
         )
     else:
         raise ValueError("Invalid peakScout call")
@@ -93,6 +98,8 @@ if __name__ == "__main__":
         help="Down bound (default: None)",
     )
     parser.add_argument("--gtf_ref", "--gtf", type=str, help="File path to gtf")
+    parser.add_argument('--consensus', action='store_true', help='Consensus peak file')
+    parser.add_argument('--preserve', action='store_true', help='Preserve all columns in input file')
 
     args = parser.parse_args()
 

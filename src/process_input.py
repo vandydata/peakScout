@@ -3,7 +3,7 @@ import os
 
 
 def process_peaks(
-    file_path: str, peak_type: str, option: str, boundary: int
+    file_path: str, peak_type: str, option: str, boundary: int, consensus: bool
 ) -> pl.DataFrame:
     """
     Read in peak data and create a Polars DataFrame to hold the data.
@@ -13,6 +13,7 @@ def process_peaks(
     peak_type (str): Type of peak caller used to generate peak file (e.g. MACS2, SEACR).
     option (str): Option for defining start and end positions of peaks.
     boundary (int): Boundary for artificial peak boundary option. None if other options.
+    consensus (bool): Whether to use consensus peaks.
 
     Returns:
     peaks (pl.DataFrame): Polars DataFrame containing all relevant peak data
@@ -22,11 +23,13 @@ def process_peaks(
     None
     """
 
-    if peak_type == "MACS2" and "xls" in file_path:
+    if peak_type == "MACS2" and "xls" in file_path and not consensus:
         peaks = read_input_MACS2_xls(file_path)
-    elif peak_type == "MACS2" and "bed" in file_path:
+    elif peak_type == "MACS2" and "bed" in file_path and not consensus:
         peaks = read_input_MACS2_bed(file_path)
-    elif peak_type == "SEACR":
+    elif peak_type == "MACS2" and "bed" in file_path and consensus:
+        peaks = read_input_MACS2_bed_consensus(file_path)
+    elif peak_type == "SEACR" and not consensus:
         peaks = read_input_SEACR(file_path)
     else:
         raise TypeError("Invalid peak type")
@@ -91,6 +94,55 @@ def read_input_MACS2_bed(file_path: str) -> pl.DataFrame:
 
     rename_columns = {f"column_{i+1}": col_names[i] for i in range(peaks.width)}
     peaks = peaks.rename(dict(rename_columns))
+
+    return peaks
+
+
+def read_input_MACS2_bed_consensus(file_path: str) -> pl.DataFrame:
+    """
+    Read in MACS2 peak data in bed format.
+
+    Parameters:
+    file_path (str): Path to the peak file.
+
+    Returns:
+    peaks (pl.DataFrame): Polars DataFrame containing all relevant peak data
+                          from the input file.
+
+    Outputs:
+    None
+    """
+    col_names = [
+        "chr",
+        "start",
+        "end",
+        "peak_starts",
+        "peak_ends",
+        "peak_names",
+        "scores",
+        "peak_lengths",
+        "abs_summits",
+        "pileups",
+        "pvalues",
+        "fold_enrichments",
+        "qvalues",
+        "strands",
+        "source_files",
+        "num_peaks",
+        "avg_score",
+        "avg_pileup",
+        "avg_pvalue",
+        "avg_fold_enrichment",
+        "avg_qvalue",
+    ]
+
+    peaks = pl.read_csv(file_path, has_header=False, separator="\t", skip_rows=24)
+
+    rename_columns = {f"column_{i+1}": col_names[i] for i in range(peaks.width)}
+    peaks = peaks.rename(dict(rename_columns))
+
+    rename_name_column = {"peak_names": "name"}
+    peaks = peaks.rename(rename_name_column)
 
     return peaks
 

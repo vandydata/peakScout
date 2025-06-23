@@ -10,6 +10,7 @@ def get_nearest_features(
     up_bound: int,
     down_bound: int,
     k: int,
+    preserve: bool,
 ) -> pl.DataFrame:
     """
     Determine the nearest k features to each peak in roi using the reference
@@ -23,6 +24,7 @@ def get_nearest_features(
     up_bound (int): Maximum allowed distance between peak and upstream feature.
     down_bound (int): Maximum allowed distance between peak and downstream feature.
     k (int): Number of nearest features to collect.
+    preserve (bool): If True, preserve the original columns of the roi DataFrame.
 
     Returns:
     return_roi (pl.DataFrame): Polars DataFrame containing peak information, the
@@ -40,7 +42,10 @@ def get_nearest_features(
     start_features = starts.select(feature).to_numpy().flatten()
     end_features = ends.select(feature).to_numpy().flatten()
 
-    return_roi = roi.select(["name", "chr", "start", "end"]).clone()
+    if not preserve:
+        return_roi = roi.select(["name", "chr", "start", "end"]).clone()
+    else:
+        return_roi = roi.clone()
 
     index = 0
 

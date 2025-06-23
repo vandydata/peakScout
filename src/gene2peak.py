@@ -17,6 +17,7 @@ def gene2peak(
     output_type: str,
     option: str = "native_peak_boundaries",
     boundary: int = None,
+    consensus: bool = False,
 ) -> None:
     """
     Find the nearest peaks for a given list of genes.
@@ -33,6 +34,7 @@ def gene2peak(
     output_type (str): Output type (csv file or xlsx file).
     option (str): Option for defining start and end positions of peaks.
     boundary (int): Boundary for artificial peak boundary option. None if other options.
+    consensus (bool): Whether to use consensus peaks.
 
     Returns:
     None
@@ -42,7 +44,7 @@ def gene2peak(
     between those peaks and the gene.
     """
 
-    peaks = process_peaks(peak_file, peak_type, option, boundary)
+    peaks = process_peaks(peak_file, peak_type, option, boundary, consensus)
     genes = process_genes(gene_file, species, ref_dir)
 
     decomposed_peaks = decompose_features(peaks)
@@ -99,6 +101,7 @@ def find_nearest(
                     None,
                     None,
                     num_features,
+                    False,
                 ),
             ]
         )
