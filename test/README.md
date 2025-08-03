@@ -1,3 +1,4 @@
+
 # Test files
 
 ## Test file - gene annotation
@@ -10,6 +11,7 @@
 
 * `test_MACS2.bed` MACS2 (narrowPeak) file
 * `test_SEACR.bed` SEACR file
+* `test_BED6.bed` BED6 file
 
 ## Expected test results
 
