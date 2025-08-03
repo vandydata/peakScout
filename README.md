@@ -1,8 +1,12 @@
 # peakScout
 
+[![peakScout](https://github.com/vandydata/peakScout/actions/workflows/python.yaml/badge.svg)](https://github.com/vandydata/peakScout/actions/workflows/python.yaml)
+
 peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results
 
-Please cite CITATION if you use peakScout, thank you!
+> Please cite CITATION if you use peakScout, thank you!
+
+## Overview
 
 PeakScout is a bioinformatics tool designed to bridge the gap between genomic peak data and gene annotations, enabling researchers to understand the relationship between regulatory elements and their target genes. At its core, peakScout processes genomic peak files from common peak callers like MACS2 and SEACR and maps them to nearby genes using reference genome annotations. The workflow begins with input processing, where peak files are standardized and reference GTF files are decomposed into chromosome-specific feature collections. The core analysis modules then perform bidirectional mapping: peak-to-gene identifies which genes are potentially regulated by specific genomic regions, while gene-to-peak reveals which regulatory elements might influence particular genes. Throughout this process, nearest-feature detection algorithms handle the complex spatial relationships between genomic elements, considering factors like distance constraints and feature overlaps. Finally, the results are formatted into researcher-friendly CSV and Excel outputs, providing a comprehensive view of the genomic landscape that connects regulatory elements to their potential gene targets.
 
