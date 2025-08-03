@@ -39,6 +39,8 @@ species_order=(
     "pig_Sscrofa11.1"
 )
 
+
+
 GTF_DIR="reference/gtf_files"
 mkdir -p $GTF_DIR
 
@@ -53,16 +55,16 @@ for species in "${species_order[@]}"; do
     gunzip -f "${GTF_DIR}/${filename}"
     
     decompressed_filename="${filename%.gz}"
-    echo "Saved as ${GTF_DIR}/${decompressed_filename}"
+    echo "Saved ${GTF_DIR}/${decompressed_filename}"
 
     # peakScout decompose
     ./src/peakScout decompose --ref_dir reference --species ${species} --gtf_ref ${GTF_DIR}/${decompressed_filename}
 
     # tar.zst
-    CMD="tar -I zstd -cvf reference/${species}.tar.zst reference/${species}"
-    eval $CMD
+    tar -cf - reference/${species} | zstd > reference/${species}.tar.zst
 
     # Copy to public S3 bucket for this project
     aws s3 cp reference/${species}.tar.zst s3://cds-peakscout-public/
     
 done
+
