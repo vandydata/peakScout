@@ -25,8 +25,7 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install --system pdoc
-        # Install any project dependencies if needed
-        # uv pip install --system -r requirements.txt
+        uv pip install --system -r requirements.txt
         
     - name: Generate documentation
       run: |
