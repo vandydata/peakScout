@@ -1,4 +1,4 @@
-# peakScout <a href="https://github.com/vandydata/scGenePanel"><img src="assets/logo.svg" align="right" height="250"  alt="peakScout website"/></a>
+# peakScout <a href="https://github.com/vandydata/peakScout"><img src="assets/logo.svg" align="right" height="350"  alt="peakScout website"/></a>
 
 <!-- badges: start -->
 [![peakScout](https://github.com/vandydata/peakScout/actions/workflows/python.yaml/badge.svg)](https://github.com/vandydata/peakScout/actions/workflows/python.yaml)
