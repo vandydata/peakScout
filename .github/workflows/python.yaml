@@ -40,3 +40,6 @@ jobs:
 
       - name: Test SEACR peak2gene
         run: bash test/test_SEACR.sh
+
+      - name: Test BED6 peak2gene
+        run: bash test/test_BED6.sh

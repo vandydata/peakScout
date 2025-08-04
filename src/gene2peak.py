@@ -24,7 +24,7 @@ def gene2peak(
 
     Parameters:
     peak_file (str): Path to the peak file.
-    peak_type (str): Type of peak caller used to generate peak file (e.g. MACS2, SEACR).
+    peak_type (str): Type of peak caller used to generate peak file (e.g. MACS2, SEACR, BED6).
     gene_file (str): Path to the gene file.
     species (str): Species of the reference genome.
     num_features (int): Number of nearest features to find.

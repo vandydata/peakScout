@@ -46,7 +46,12 @@ def decompose_gtf(ref_dir: str, species: str, gtf_ref: str) -> None:
     ]
 
     full_df = pl.read_csv(
-        gtf_ref, has_header=False, separator="\t", skip_rows=5, new_columns=col_names
+        gtf_ref, 
+        has_header=False, 
+        separator="\t", 
+        skip_rows=5, 
+        new_columns=col_names,
+        schema_overrides={"chr": pl.String}
     )
 
     for name, group in full_df.group_by(["feature"]):
