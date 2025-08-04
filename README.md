@@ -94,6 +94,20 @@ peakScout peak2gene \
 --output_type xslx
 ```
 
+Specific example:
+
+```bash
+peakScout peak2gene \
+--peak_file test/test_MACS2.bed \
+--peak_type MACS2 \
+--species mm39 \
+--k 2 \
+--ref_dir reference/mm39 \
+--output_name peakScout_test_MACS2 \
+--o my_output_dir \
+--output_type xslx
+```
+
 ### Finding Nearest Peaks
 
 Once a reference GTF has been decomposed, you can use the decomposition to find the nearest peaks to a set of genes. Peak files can be MACS2, SEACR outputs, or standard BED6 format files and can be Excel sheets or BED files. Gene names should be in a single column CSV file with no header.
