@@ -1,0 +1,18 @@
+# AWS SDK for Python - for S3, Lambda operations
+boto3>=1.26.0
+botocore>=1.29.0
+
+# AWS Lambda Runtime Interface Client (if needed for custom runtime)
+# awslambdaric>=2.0.0
+
+# For handling compressed files from S3 (genomics data often compressed)
+# gzip is built-in, but you might want:
+# lz4>=4.0.0
+# zstandard>=0.20.0
+
+# For better JSON handling with large genomics datasets
+# orjson>=3.8.0
+
+# For temporary file handling optimization
+# tempfile is built-in, but for better cleanup:
+# atexit (built-in)
