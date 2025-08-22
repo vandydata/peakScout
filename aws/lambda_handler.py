@@ -19,9 +19,10 @@ def extract_zst(archive: Path, out_path: Path):
     out_path: pathlib.Path or str
       directory to extract files and directories to
     """
-    
+
     archive = Path(archive).expanduser()
-    out_path = Path(out_path).expanduser().resolve() # need .resolve() in case intermediate relative dir doesn't exist
+    out_path = Path(out_path).expanduser().resolve()
+    # need .resolve() in case intermediate relative dir doesn't exist
     dctx = zstandard.ZstdDecompressor()
     with tempfile.TemporaryFile(suffix=".tar") as ofh:
         with archive.open("rb") as ifh:
@@ -146,8 +147,7 @@ def handler(event, context):
         command = event.get('command')
         args = event.get('args', [])
         return_files = event.get('return_files', True)
-        max_file_size_MB = 20
-        max_file_size = event.get('max_file_size', (max_file_size_MB * 1048576))
+        max_file_size = event.get('max_file_size', 1048576)  # 1MB default
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
         
         if not command:
@@ -165,7 +165,7 @@ def handler(event, context):
         
         # Download and extract reference data if species is specified
         ref_dir = None
-        if species and species != 'test':  # Skip. test data is in container and not s3
+        if species and species != 'test':  # Skip download for test species
             try:
                 ref_dir = download_and_extract_reference(species, s3_bucket)
                 print(f"Reference data ready at: {ref_dir}")
@@ -178,7 +178,7 @@ def handler(event, context):
                     })
                 }
         
-        # Create temporary output directory in /tmp
+        # Create  /tmp
         temp_output_dir = tempfile.mkdtemp(prefix='peakscout_output_', dir='/tmp')
         
         # Process arguments
@@ -196,18 +196,33 @@ def handler(event, context):
                 modified_args.append(temp_output_dir)
                 # Skip the next argument (original output path)
                 skip_next = True
-            elif arg == '--ref_dir' and ref_dir:
-                # Replace ref_dir with downloaded reference if we have one
-                modified_args.append(arg)
-                modified_args.append(ref_dir)
-                skip_next = True  # Skip original ref_dir path
+            elif arg == '--ref_dir':
+                if ref_dir:
+                    # Use downloaded reference if we have one
+                    modified_args.append(arg)
+                    modified_args.append(ref_dir)
+                    skip_next = True  # Skip original ref_dir path
+                elif species == 'test':
+                    # Keep original ref_dir for test species
+                    modified_args.append(arg)
+                    # Don't skip next - use the provided test reference path
+                else:
+                    # For real species without downloaded ref, this is an error
+                    return {
+                        'statusCode': 500,
+                        'body': json.dumps({
+                            'error': f'No reference data available for species {species}. Reference download may have failed.',
+                            'error_type': 'ReferenceDataError'
+                        })
+                    }
             else:
                 # Keep all other arguments as-is
                 modified_args.append(arg)
         
-        # Set up and run the peakScout command
+        # Build command
         cmd = ['python3', 'peakScout'] + modified_args + [command]
         
+        # Execute the command
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -226,7 +241,7 @@ def handler(event, context):
             'ref_dir_used': ref_dir
         }
         
-        # Add debug information if requested
+        # Add debug information
         if event.get('debug', False):
             response_data['debug_info'] = {
                 'tmp_contents': list_tmp_contents(),
@@ -287,7 +302,7 @@ def handler(event, context):
             response_data['output_files'] = output_files
             response_data['files_found'] = len(output_files)
         
-        # Clean up temp directory (but keep reference data for reuse)
+        # Clean up temp directory
         try:
             shutil.rmtree(temp_output_dir)
             response_data['cleanup_status'] = 'success'
@@ -309,7 +324,9 @@ def handler(event, context):
         }
 
 def list_directory_contents(directory_path, max_depth=2):
-    """Helper function to list directory contents for debugging"""
+    """
+    Helper function to list directory contents for debugging
+    """
     try:
         dir_path = Path(directory_path)
         if not dir_path.exists():
@@ -346,8 +363,6 @@ def list_directory_contents(directory_path, max_depth=2):
 def list_tmp_contents():
     """
     Helper function to list /tmp contents for debugging
-    
-    Returns a string representation of files and directories in /tmp
     """
     try:
         tmp_path = Path('/tmp')

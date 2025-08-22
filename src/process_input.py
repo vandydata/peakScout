@@ -27,6 +27,8 @@ def process_peaks(
         peaks = read_input_MACS2_xls(file_path)
     elif peak_type == "MACS2" and "bed" in file_path and not consensus:
         peaks = read_input_MACS2_bed(file_path)
+    elif peak_type == "MACS2" and "narrowPeak" in file_path and not consensus:
+        peaks = read_input_MACS2_bed(file_path)
     elif peak_type == "MACS2" and "bed" in file_path and consensus:
         peaks = read_input_MACS2_bed_consensus(file_path)
     elif peak_type == "SEACR" and not consensus:
