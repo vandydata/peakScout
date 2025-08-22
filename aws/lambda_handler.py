@@ -256,13 +256,18 @@ def handler(event, context):
         command = event.get('command')
         args = event.get('args', [])
         return_files = event.get('return_files', True)
-        max_file_size = event.get('max_file_size', (6 * 1048576))  # 6MB default
+        max_file_size = event.get('max_file_size', 1048576)  # 1MB default
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
         compress_response = event.get('compress_response', True)  # Enable compression by default
         
         if not command:
             return {
                 'statusCode': 400,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+                },
                 'body': json.dumps({'error': 'No command specified'})
             }
         
@@ -281,6 +286,11 @@ def handler(event, context):
             except Exception as e:
                 return {
                     'statusCode': 500,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+                    },
                     'body': json.dumps({
                         'error': f'Failed to setup reference data for species {species}: {str(e)}',
                         'error_type': 'ReferenceDataError'
@@ -321,6 +331,11 @@ def handler(event, context):
                     # For real species without downloaded ref, this is an error
                     return {
                         'statusCode': 500,
+                        'headers': {
+                            'Access-Control-Allow-Origin': '*',
+                            'Access-Control-Allow-Headers': 'Content-Type',
+                            'Access-Control-Allow-Methods': 'POST, OPTIONS'
+                        },
                         'body': json.dumps({
                             'error': f'No reference data available for species {species}. Reference download may have failed.',
                             'error_type': 'ReferenceDataError'
@@ -456,7 +471,10 @@ def handler(event, context):
                     'statusCode': status_code,
                     'headers': {
                         'Content-Encoding': 'gzip',
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                        'Access-Control-Allow-Methods': 'POST, OPTIONS'
                     },
                     'body': encoded_data,
                     'isBase64Encoded': True,
@@ -470,12 +488,22 @@ def handler(event, context):
         
         return {
             'statusCode': status_code,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            },
             'body': response_body
         }
         
     except Exception as e:
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            },
             'body': json.dumps({
                 'error': str(e),
                 'error_type': type(e).__name__
