@@ -147,7 +147,7 @@ def handler(event, context):
         command = event.get('command')
         args = event.get('args', [])
         return_files = event.get('return_files', True)
-        max_file_size = event.get('max_file_size', 1048576)  # 1MB default
+        max_file_size = event.get('max_file_size', (20 * 1048576))  # 1MB default
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
         
         if not command:
