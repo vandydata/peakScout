@@ -7,19 +7,22 @@ from pathlib import Path
 import boto3
 import tarfile
 import zstandard
+import gzip
+import base64
 
 def extract_zst(archive: Path, out_path: Path):
-    """extract .zst file
-    works on Windows, Linux, MacOS, etc.
+    """
+    extract .zst file
     
     Parameters
     ----------
-    archive: pathlib.Path or str
-      .zst file to extract
-    out_path: pathlib.Path or str
-      directory to extract files and directories to
+    archive:    pathlib.Path or str
+                .zst file to extract
+    out_path:   pathlib.Path or str
+                directory to extract files and directories to
+      
     """
-
+    
     archive = Path(archive).expanduser()
     out_path = Path(out_path).expanduser().resolve()
     # need .resolve() in case intermediate relative dir doesn't exist
@@ -37,16 +40,16 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
     
     Parameters
     ----------
-    species: str
-        Species identifier (e.g., 'mm10', 'hg38', 'mm39')
+    species:     str
+                 Species identifier (e.g., 'mm10', 'hg38', 'mm39')
     bucket_name: str
-        S3 bucket containing reference files
+                 S3 bucket containing reference files
         
     Returns
     -------
-    str: Path to extracted reference directory
+    str:         Path to extracted reference directory
     """
-    
+
     # Map species to S3 file names
     species_mapping = {
         'mm10': 'mouse_mm10.tar.zst',
@@ -79,7 +82,7 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
                 print(f"Reference for {species} already exists at {ref_dir}")
                 return ref_dir
     
-    # Download file from S3
+    # Download reference file from S3
     s3_client = boto3.client('s3')
     try:
         print(f"Downloading {file_name} from S3...")
@@ -103,7 +106,7 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
         # Find the actual extracted directory
         extracted_ref_dir = None
         for root, dirs, files in os.walk(ref_dir):
-            # Look for the gene directory
+            # Look for  "gene" directory
             if 'gene' in dirs:
                 gene_dir = os.path.join(root, 'gene')
                 # Verify it has chromosome files
@@ -115,9 +118,8 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
                     continue
         
         if extracted_ref_dir:
-            # Create the expected directory structure
+            # Create a symlink from expected path to actual path
             if not os.path.exists(expected_species_dir):
-                # Create a symlink from expected path to actual path
                 os.symlink(extracted_ref_dir, expected_species_dir)
                 print(f"Created symlink: {expected_species_dir} -> {extracted_ref_dir}")
             
@@ -130,9 +132,79 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
     except Exception as e:
         raise Exception(f"Failed to extract {archive_path}: {str(e)}")
 
+
+def list_directory_contents(directory_path, max_depth=2):
+    """
+    Helper function to list directory contents for debugging
+    
+    Parameters
+    
+    
+    """
+    try:
+        dir_path = Path(directory_path)
+        if not dir_path.exists():
+            return f"Directory {directory_path} does not exist"
+        
+        contents = []
+        contents.append(f"=== Contents of {directory_path} ===")
+        
+        def list_recursive(path, current_depth=0, prefix=""):
+            if current_depth > max_depth:
+                return
+            try:
+                items = sorted(path.iterdir())
+                for item in items:
+                    if item.is_file():
+                        size = item.stat().st_size
+                        contents.append(f"{prefix} {item.name} ({size:,} bytes)")
+                    elif item.is_dir():
+                        file_count = len(list(item.iterdir())) if current_depth < max_depth else "?"
+                        contents.append(f"{prefix} {item.name}/ ({file_count} items)")
+                        if current_depth < max_depth:
+                            list_recursive(item, current_depth + 1, prefix + "  ")
+            except PermissionError:
+                contents.append(f"{prefix} Permission denied")
+            except Exception as e:
+                contents.append(f"{prefix} Error: {str(e)}")
+        
+        list_recursive(dir_path)
+        return "\n".join(contents)
+    except Exception as e:
+        return f"Error listing {directory_path}: {str(e)}"
+
+
+def list_tmp_contents():
+    """
+    Helper function to list /tmp contents for debugging
+    
+    Returns a string representation of the contents of the /tmp directory
+    """
+    try:
+        tmp_path = Path('/tmp')
+        contents = []
+        for item in tmp_path.iterdir():
+            if item.is_file():
+                contents.append(f"FILE: {item} ({item.stat().st_size} bytes)")
+            elif item.is_dir():
+                file_count = len(list(item.rglob('*')))
+                contents.append(f"DIR:  {item}/ ({file_count} items)")
+        return "\n".join(contents) if contents else "No items in /tmp"
+    except Exception as e:
+        return f"Error listing /tmp: {str(e)}"
+    
+    
 def handler(event, context):
     """
-    Enhanced Lambda handler for peakScout that downloads reference data from S3
+    Lambda handler for peakScout
+    
+    Parameters
+    ----------
+    event: dict
+           Input event containing command and arguments
+           
+    context: object
+             Lambda context object (not used here, but can be useful for logging)
     
     Expected input:
     {
@@ -147,8 +219,9 @@ def handler(event, context):
         command = event.get('command')
         args = event.get('args', [])
         return_files = event.get('return_files', True)
-        max_file_size = event.get('max_file_size', (20 * 1048576))  # 1MB default
+        max_file_size = event.get('max_file_size', 1048576)  # 1MB default
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
+        compress_response = event.get('compress_response', True)  # Enable compression by default
         
         if not command:
             return {
@@ -156,14 +229,13 @@ def handler(event, context):
                 'body': json.dumps({'error': 'No command specified'})
             }
         
-        # Extract species from args to download reference data
         species = None
         for i, arg in enumerate(args):
             if arg == '--species' and i + 1 < len(args):
                 species = args[i + 1]
                 break
         
-        # Download and extract reference data if species is specified
+        # Download and extract reference
         ref_dir = None
         if species and species != 'test':  # Skip download for test species
             try:
@@ -178,10 +250,10 @@ def handler(event, context):
                     })
                 }
         
-        # Create  /tmp
+        # Create /tmp
         temp_output_dir = tempfile.mkdtemp(prefix='peakscout_output_', dir='/tmp')
         
-        # Process arguments
+        # Process arguments and replace paths
         modified_args = []
         skip_next = False
         
@@ -219,7 +291,7 @@ def handler(event, context):
                 # Keep all other arguments as-is
                 modified_args.append(arg)
         
-        # Build command
+        # Build the peakScout command
         cmd = ['python3', 'peakScout'] + modified_args + [command]
         
         # Execute the command
@@ -262,7 +334,7 @@ def handler(event, context):
                             relative_path = str(file_path.relative_to(output_path))
                             
                             if file_size <= max_file_size:
-                                # Read file content
+                                # For small files, include content directly
                                 try:
                                     with open(file_path, 'r', encoding='utf-8') as f:
                                         content = f.read()
@@ -284,13 +356,31 @@ def handler(event, context):
                                         'full_path': str(file_path)
                                     }
                             else:
-                                # File too large, just include metadata
-                                output_files[relative_path] = {
-                                    'content': f'<FILE_TOO_LARGE: {file_size} bytes>',
-                                    'size': file_size,
-                                    'type': 'metadata_only',
-                                    'full_path': str(file_path)
-                                }
+                                # Large file - upload to S3 and provide URL
+                                s3_key = f"lambda-outputs/{context.aws_request_id}/{relative_path}"
+                                s3_bucket = event.get('output_s3_bucket', 'cds-peakscout-public')
+                                try:
+                                    s3_client = boto3.client('s3')
+                                    s3_client.upload_file(str(file_path), s3_bucket, s3_key)
+                                    s3_url = f"s3://{s3_bucket}/{s3_key}"
+                                    
+                                    output_files[relative_path] = {
+                                        'content': f'<FILE_UPLOADED_TO_S3: {s3_url}>',
+                                        'size': file_size,
+                                        'type': 's3_upload',
+                                        'full_path': str(file_path),
+                                        's3_url': s3_url,
+                                        's3_bucket': s3_bucket,
+                                        's3_key': s3_key
+                                    }
+                                    print(f"Uploaded {file_path} to S3: {s3_url}")
+                                except Exception as e:
+                                    output_files[relative_path] = {
+                                        'content': f'<UPLOAD_FAILED: {str(e)}>',
+                                        'size': file_size,
+                                        'type': 'upload_error',
+                                        'full_path': str(file_path)
+                                    }
                         except Exception as e:
                             output_files[relative_path] = {
                                 'content': f'<ERROR_READING_FILE: {str(e)}>',
@@ -302,16 +392,43 @@ def handler(event, context):
             response_data['output_files'] = output_files
             response_data['files_found'] = len(output_files)
         
-        # Clean up temp directory
+        # Clean up
         try:
             shutil.rmtree(temp_output_dir)
             response_data['cleanup_status'] = 'success'
         except Exception as e:
             response_data['cleanup_status'] = f'failed: {str(e)}'
         
+        #  response
+        status_code = 200 if result.returncode == 0 else 500
+        response_body = json.dumps(response_data, indent=2)
+        
+        # Compress response if it's large or if compression is requested
+        if compress_response and len(response_body) > 100000:  # Compress if > 100KB
+            try:
+                # Compress the JSON
+                compressed_data = gzip.compress(response_body.encode('utf-8'))
+                encoded_data = base64.b64encode(compressed_data).decode('utf-8')
+                
+                return {
+                    'statusCode': status_code,
+                    'headers': {
+                        'Content-Encoding': 'gzip',
+                        'Content-Type': 'application/json'
+                    },
+                    'body': encoded_data,
+                    'isBase64Encoded': True,
+                    'uncompressed_size': len(response_body),
+                    'compressed_size': len(encoded_data)
+                }
+            except Exception as e:
+                # If compression fails, fall back to uncompressed
+                response_data['compression_error'] = f'Failed to compress: {str(e)}'
+                response_body = json.dumps(response_data, indent=2)
+        
         return {
-            'statusCode': 200 if result.returncode == 0 else 500,
-            'body': json.dumps(response_data, indent=2)
+            'statusCode': status_code,
+            'body': response_body
         }
         
     except Exception as e:
@@ -322,57 +439,3 @@ def handler(event, context):
                 'error_type': type(e).__name__
             })
         }
-
-def list_directory_contents(directory_path, max_depth=2):
-    """
-    Helper function to list directory contents for debugging
-    """
-    try:
-        dir_path = Path(directory_path)
-        if not dir_path.exists():
-            return f"Directory {directory_path} does not exist"
-        
-        contents = []
-        contents.append(f"=== Contents of {directory_path} ===")
-        
-        def list_recursive(path, current_depth=0, prefix=""):
-            if current_depth > max_depth:
-                return
-            
-            try:
-                items = sorted(path.iterdir())
-                for item in items:
-                    if item.is_file():
-                        size = item.stat().st_size
-                        contents.append(f"{prefix} {item.name} ({size:,} bytes)")
-                    elif item.is_dir():
-                        file_count = len(list(item.iterdir())) if current_depth < max_depth else "?"
-                        contents.append(f"{prefix} {item.name}/ ({file_count} items)")
-                        if current_depth < max_depth:
-                            list_recursive(item, current_depth + 1, prefix + "  ")
-            except PermissionError:
-                contents.append(f"{prefix} Permission denied")
-            except Exception as e:
-                contents.append(f"{prefix} Error: {str(e)}")
-        
-        list_recursive(dir_path)
-        return "\n".join(contents)
-    except Exception as e:
-        return f"Error listing {directory_path}: {str(e)}"
-
-def list_tmp_contents():
-    """
-    Helper function to list /tmp contents for debugging
-    """
-    try:
-        tmp_path = Path('/tmp')
-        contents = []
-        for item in tmp_path.iterdir():
-            if item.is_file():
-                contents.append(f"FILE: {item} ({item.stat().st_size} bytes)")
-            elif item.is_dir():
-                file_count = len(list(item.rglob('*')))
-                contents.append(f"DIR:  {item}/ ({file_count} items)")
-        return "\n".join(contents) if contents else "No items in /tmp"
-    except Exception as e:
-        return f"Error listing /tmp: {str(e)}"
