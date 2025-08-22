@@ -8,9 +8,6 @@ import boto3
 import tarfile
 import zstandard
 
-# Lana's s3 copy code is at https://github.com/vandydata/peakScout/commit/d9f0a8046b5a84db78a00296eaf068ee54daf037
-# 
-# 
 def extract_zst(archive: Path, out_path: Path):
     """extract .zst file
     works on Windows, Linux, MacOS, etc.
@@ -23,11 +20,8 @@ def extract_zst(archive: Path, out_path: Path):
       directory to extract files and directories to
     """
     
-    if zstandard is None:
-        raise ImportError("pip install zstandard")
     archive = Path(archive).expanduser()
-    out_path = Path(out_path).expanduser().resolve()
-    # need .resolve() in case intermediate relative dir doesn't exist
+    out_path = Path(out_path).expanduser().resolve() # need .resolve() in case intermediate relative dir doesn't exist
     dctx = zstandard.ZstdDecompressor()
     with tempfile.TemporaryFile(suffix=".tar") as ofh:
         with archive.open("rb") as ifh:
@@ -76,9 +70,13 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
     archive_path = f'/tmp/{file_name}'
     
     # Check if reference already exists and is valid
-    if os.path.exists(ref_dir) and os.listdir(ref_dir):
-        print(f"Reference for {species} already exists at {ref_dir}")
-        return ref_dir
+    if os.path.exists(ref_dir):
+        expected_species_dir = os.path.join(ref_dir, species)
+        if os.path.exists(expected_species_dir):
+            gene_dir = os.path.join(expected_species_dir, 'gene')
+            if os.path.exists(gene_dir) and os.listdir(gene_dir):
+                print(f"Reference for {species} already exists at {ref_dir}")
+                return ref_dir
     
     # Download file from S3
     s3_client = boto3.client('s3')
@@ -95,29 +93,53 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
         os.makedirs(ref_dir, exist_ok=True)
         extract_zst(archive_path, ref_dir)
         
-        # Verify extraction
-        if os.path.exists(ref_dir) and os.listdir(ref_dir):
-            print(f"Successfully extracted reference to {ref_dir}")
+        # peakScout expects: ref_dir/{species}/gene/
+        # But archives extract to: ref_dir/reference/{species_full_name}/gene/
+        # We need to create a symlink or move the directory structure
+        
+        expected_species_dir = os.path.join(ref_dir, species)
+        
+        # Find the actual extracted directory
+        extracted_ref_dir = None
+        for root, dirs, files in os.walk(ref_dir):
+            # Look for the gene directory
+            if 'gene' in dirs:
+                gene_dir = os.path.join(root, 'gene')
+                # Verify it has chromosome files
+                try:
+                    if any(f.startswith('chr') and f.endswith('.csv') for f in os.listdir(gene_dir)):
+                        extracted_ref_dir = root
+                        break
+                except:
+                    continue
+        
+        if extracted_ref_dir:
+            # Create the expected directory structure
+            if not os.path.exists(expected_species_dir):
+                # Create a symlink from expected path to actual path
+                os.symlink(extracted_ref_dir, expected_species_dir)
+                print(f"Created symlink: {expected_species_dir} -> {extracted_ref_dir}")
+            
             # Clean up archive file
             os.remove(archive_path)
-            return ref_dir
+            return ref_dir  # Return the base ref_dir, peakScout will append species/gene
         else:
-            raise Exception("Extraction appeared to succeed but directory is empty")
+            raise Exception("Could not find gene reference files in expected structure")
             
     except Exception as e:
         raise Exception(f"Failed to extract {archive_path}: {str(e)}")
-# 
-# 
+
 def handler(event, context):
     """
-    Enhanced Lambda handler for peakScout that uses /tmp for output
+    Enhanced Lambda handler for peakScout that downloads reference data from S3
     
     Expected input:
     {
         "command": "decompose|peak2gene|gene2peak",
         "args": ["--species", "hg38", "--k", "5", ...],
         "return_files": true,  # Optional: whether to return file contents
-        "max_file_size": 1048576  # Optional: max file size to return (1MB default)
+        "max_file_size": 1048576,  # Optional: max file size to return (1MB default)
+        "s3_bucket": "cds-peakscout-public"  # Optional: override default S3 bucket
     }
     """
     try:
@@ -125,9 +147,9 @@ def handler(event, context):
         args = event.get('args', [])
         return_files = event.get('return_files', True)
         max_file_size_MB = 20
-        max_file_size = event.get('max_file_size', (max_file_size_MB * 1048576))  # 1MB default
+        max_file_size = event.get('max_file_size', (max_file_size_MB * 1048576))
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
-
+        
         if not command:
             return {
                 'statusCode': 400,
@@ -141,9 +163,9 @@ def handler(event, context):
                 species = args[i + 1]
                 break
         
-        # Download and extract reference data
+        # Download and extract reference data if species is specified
         ref_dir = None
-        if species and species != 'test':  # Skip download for test species
+        if species and species != 'test':  # Skip. test data is in container and not s3
             try:
                 ref_dir = download_and_extract_reference(species, s3_bucket)
                 print(f"Reference data ready at: {ref_dir}")
@@ -156,11 +178,10 @@ def handler(event, context):
                     })
                 }
         
-        
         # Create temporary output directory in /tmp
         temp_output_dir = tempfile.mkdtemp(prefix='peakscout_output_', dir='/tmp')
         
-        # Simple approach: Replace output path in args
+        # Process arguments
         modified_args = []
         skip_next = False
         
@@ -175,14 +196,18 @@ def handler(event, context):
                 modified_args.append(temp_output_dir)
                 # Skip the next argument (original output path)
                 skip_next = True
+            elif arg == '--ref_dir' and ref_dir:
+                # Replace ref_dir with downloaded reference if we have one
+                modified_args.append(arg)
+                modified_args.append(ref_dir)
+                skip_next = True  # Skip original ref_dir path
             else:
                 # Keep all other arguments as-is
                 modified_args.append(arg)
         
-        # Build the peakScout command - command goes at the END as a positional argument
+        # Set up and run the peakScout command
         cmd = ['python3', 'peakScout'] + modified_args + [command]
         
-        # Execute the command
         result = subprocess.run(
             cmd,
             capture_output=True,
@@ -200,6 +225,13 @@ def handler(event, context):
             'species': species,
             'ref_dir_used': ref_dir
         }
+        
+        # Add debug information if requested
+        if event.get('debug', False):
+            response_data['debug_info'] = {
+                'tmp_contents': list_tmp_contents(),
+                'ref_dir_contents': list_directory_contents(ref_dir) if ref_dir else "No reference directory"
+            }
         
         # If successful and return_files is enabled, collect output files
         if result.returncode == 0 and return_files:
@@ -276,8 +308,47 @@ def handler(event, context):
             })
         }
 
+def list_directory_contents(directory_path, max_depth=2):
+    """Helper function to list directory contents for debugging"""
+    try:
+        dir_path = Path(directory_path)
+        if not dir_path.exists():
+            return f"Directory {directory_path} does not exist"
+        
+        contents = []
+        contents.append(f"=== Contents of {directory_path} ===")
+        
+        def list_recursive(path, current_depth=0, prefix=""):
+            if current_depth > max_depth:
+                return
+            
+            try:
+                items = sorted(path.iterdir())
+                for item in items:
+                    if item.is_file():
+                        size = item.stat().st_size
+                        contents.append(f"{prefix} {item.name} ({size:,} bytes)")
+                    elif item.is_dir():
+                        file_count = len(list(item.iterdir())) if current_depth < max_depth else "?"
+                        contents.append(f"{prefix} {item.name}/ ({file_count} items)")
+                        if current_depth < max_depth:
+                            list_recursive(item, current_depth + 1, prefix + "  ")
+            except PermissionError:
+                contents.append(f"{prefix} Permission denied")
+            except Exception as e:
+                contents.append(f"{prefix} Error: {str(e)}")
+        
+        list_recursive(dir_path)
+        return "\n".join(contents)
+    except Exception as e:
+        return f"Error listing {directory_path}: {str(e)}"
+
 def list_tmp_contents():
-    """Helper function to list /tmp contents for debugging"""
+    """
+    Helper function to list /tmp contents for debugging
+    
+    Returns a string representation of files and directories in /tmp
+    """
     try:
         tmp_path = Path('/tmp')
         contents = []
