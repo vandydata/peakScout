@@ -7,29 +7,56 @@ On local machine:
 cd peakScout
 docker build -t peakscout-lambda -f aws/Dockerfile .
 ```
-
-
-### Test locally (optional)
+### Test locally
 
 ```
 # 1. Run the container
 docker run -p 9000:8080 peakscout-lambda
+ 
+# with S3 access
+docker run -p 9000:8080 \
+  -e AWS_ACCESS_KEY_ID=$(aws configure get aws_access_key_id) \
+  -e AWS_SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key) \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  peakscout-lambda:latest
 
 # 2. In new terminal, test with curl in another terminal:
+# Test data
 curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -H "Content-Type: application/json" \
   -d '{
     "command": "peak2gene",
-    "parameters": {
-      "peak_file": "test/test_MACS2.bed",
-      "peak_type": "MACS2",
-      "species": "test", 
-      "k": 3,
-      "ref_dir": "test/test-reference",
-      "output_name": "test_MACS2",
-      "output_dir": "test/results/",
-      "output_type": "csv"
-    }
+    "args": [
+      "--peak_file", "test/test_MACS2.bed",
+      "--peak_type", "MACS2", 
+      "--species", "test",
+      "--k", "3",
+      "--ref_dir", "test/test-reference",
+      "--output_name", "test_MACS2",
+      "--o", "test/results/",
+      "--output_type", "csv"
+    ],
+    "return_files": true,
+    "debug": true
+  }'
+
+# Real ref data
+curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "peak2gene",
+    "args": [
+      "--peak_file", "test/test_MACS2.bed",
+      "--peak_type", "MACS2", 
+      "--species", "mm10",
+      "--k", "3",
+      "--ref_dir", "test/test-reference",
+      "--output_name", "test_MACS2",
+      "--o", "test/results/",
+      "--output_type", "csv"
+    ],
+    "return_files": true,
+    "debug": true
   }'
 
 # 3. In new terminal, check if test output is saved
@@ -103,6 +130,15 @@ docker tag peakscout-lambda:latest 802236546356.dkr.ecr.us-east-1.amazonaws.com/
 docker push 802236546356.dkr.ecr.us-east-1.amazonaws.com/peakscout-lambda:latest
 
 ```
+
+2025-08-22
+
+From local machine to ECR
+```
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com
+docker tag peakscout-lambda:latest $(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-1.amazonaws.com/peakscout-lambda:latest
+
+
 
 ## Create or update Lambda function
 
