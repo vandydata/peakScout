@@ -193,6 +193,43 @@ def list_tmp_contents():
     except Exception as e:
         return f"Error listing /tmp: {str(e)}"
     
+
+def compress_content(content):
+    """
+    Compress content with zstd and encode as base64
+    
+    Parameters
+    ----------
+    content: str
+        Content to compress
+        
+    Returns
+    -------
+    str: base64 encoded compressed content
+    """
+    compressor = zstandard.ZstdCompressor(level=3)
+    compressed = compressor.compress(content.encode('utf-8'))
+    return base64.b64encode(compressed).decode('utf-8')
+
+
+def get_preview(content, preview_lines=5):
+    """
+    Get first N lines of content as preview
+    
+    Parameters
+    ----------
+    content: str
+        Full content
+    preview_lines: int
+        Number of lines for preview
+        
+    Returns
+    -------
+    str: First N lines
+    """
+    lines = content.split('\n')
+    return '\n'.join(lines[:preview_lines])
+    
     
 def handler(event, context):
     """
@@ -219,7 +256,7 @@ def handler(event, context):
         command = event.get('command')
         args = event.get('args', [])
         return_files = event.get('return_files', True)
-        max_file_size = event.get('max_file_size', 1048576)  # 1MB default
+        max_file_size = event.get('max_file_size', (6 * 1048576))  # 6MB default
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
         compress_response = event.get('compress_response', True)  # Enable compression by default
         
@@ -256,6 +293,7 @@ def handler(event, context):
         # Process arguments and replace paths
         modified_args = []
         skip_next = False
+        ref_dir_found = False
         
         for i, arg in enumerate(args):
             if skip_next:
@@ -269,6 +307,7 @@ def handler(event, context):
                 # Skip the next argument (original output path)
                 skip_next = True
             elif arg == '--ref_dir':
+                ref_dir_found = True
                 if ref_dir:
                     # Use downloaded reference if we have one
                     modified_args.append(arg)
@@ -290,6 +329,10 @@ def handler(event, context):
             else:
                 # Keep all other arguments as-is
                 modified_args.append(arg)
+        
+        # Add --ref_dir if it wasn't provided and we have a reference
+        if not ref_dir_found and ref_dir:
+            modified_args.extend(['--ref_dir', ref_dir])
         
         # Build the peakScout command
         cmd = ['python3', 'peakScout'] + modified_args + [command]
@@ -334,26 +377,28 @@ def handler(event, context):
                             relative_path = str(file_path.relative_to(output_path))
                             
                             if file_size <= max_file_size:
-                                # For small files, include content directly
+                                # For small files, include content with compression
                                 try:
                                     with open(file_path, 'r', encoding='utf-8') as f:
                                         content = f.read()
+                                    
                                     output_files[relative_path] = {
-                                        'content': content,
+                                        'content_preview': get_preview(content),
+                                        'content': compress_content(content),
+                                        'content_compressed': True,
+                                        'compression_type': 'zstd',
                                         'size': file_size,
-                                        'type': 'text',
-                                        'full_path': str(file_path)
+                                        'type': 'text'
                                     }
                                 except UnicodeDecodeError:
                                     # Binary file, encode as base64
-                                    import base64
                                     with open(file_path, 'rb') as f:
-                                        content = base64.b64encode(f.read()).decode('utf-8')
+                                        binary_content = f.read()
                                     output_files[relative_path] = {
-                                        'content': content,
+                                        'content': base64.b64encode(binary_content).decode('utf-8'),
+                                        'content_compressed': False,
                                         'size': file_size,
-                                        'type': 'binary_base64',
-                                        'full_path': str(file_path)
+                                        'type': 'binary_base64'
                                     }
                             else:
                                 # Large file - upload to S3 and provide URL
@@ -368,7 +413,6 @@ def handler(event, context):
                                         'content': f'<FILE_UPLOADED_TO_S3: {s3_url}>',
                                         'size': file_size,
                                         'type': 's3_upload',
-                                        'full_path': str(file_path),
                                         's3_url': s3_url,
                                         's3_bucket': s3_bucket,
                                         's3_key': s3_key
@@ -378,15 +422,13 @@ def handler(event, context):
                                     output_files[relative_path] = {
                                         'content': f'<UPLOAD_FAILED: {str(e)}>',
                                         'size': file_size,
-                                        'type': 'upload_error',
-                                        'full_path': str(file_path)
+                                        'type': 'upload_error'
                                     }
                         except Exception as e:
                             output_files[relative_path] = {
                                 'content': f'<ERROR_READING_FILE: {str(e)}>',
                                 'size': 0,
-                                'type': 'error',
-                                'full_path': str(file_path) if 'file_path' in locals() else 'unknown'
+                                'type': 'error'
                             }
             
             response_data['output_files'] = output_files
