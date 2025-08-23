@@ -1,4 +1,4 @@
-name: Generate Documentation
+name: Build static website on github pages
 
 on:
   push:
