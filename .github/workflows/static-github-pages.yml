@@ -32,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: 'lambda' # <-- Explicitly checkout the lambda branch
+          ref: 'lambda' 
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
