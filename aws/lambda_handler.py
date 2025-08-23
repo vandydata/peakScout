@@ -136,10 +136,6 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
 def list_directory_contents(directory_path, max_depth=2):
     """
     Helper function to list directory contents for debugging
-    
-    Parameters
-    
-    
     """
     try:
         dir_path = Path(directory_path)
@@ -177,8 +173,6 @@ def list_directory_contents(directory_path, max_depth=2):
 def list_tmp_contents():
     """
     Helper function to list /tmp contents for debugging
-    
-    Returns a string representation of the contents of the /tmp directory
     """
     try:
         tmp_path = Path('/tmp')
@@ -197,15 +191,6 @@ def list_tmp_contents():
 def compress_content(content):
     """
     Compress content with zstd and encode as base64
-    
-    Parameters
-    ----------
-    content: str
-        Content to compress
-        
-    Returns
-    -------
-    str: base64 encoded compressed content
     """
     compressor = zstandard.ZstdCompressor(level=3)
     compressed = compressor.compress(content.encode('utf-8'))
@@ -215,17 +200,6 @@ def compress_content(content):
 def get_preview(content, preview_lines=5):
     """
     Get first N lines of content as preview
-    
-    Parameters
-    ----------
-    content: str
-        Full content
-    preview_lines: int
-        Number of lines for preview
-        
-    Returns
-    -------
-    str: First N lines
     """
     lines = content.split('\n')
     return '\n'.join(lines[:preview_lines])
@@ -233,32 +207,27 @@ def get_preview(content, preview_lines=5):
     
 def handler(event, context):
     """
-    Lambda handler for peakScout
-    
-    Parameters
-    ----------
-    event: dict
-           Input event containing command and arguments
-           
-    context: object
-             Lambda context object (not used here, but can be useful for logging)
+    Lambda handler for peakScout - direct file uploads up to 5MB
     
     Expected input:
     {
         "command": "decompose|peak2gene|gene2peak",
         "args": ["--species", "hg38", "--k", "5", ...],
-        "return_files": true,  # Optional: whether to return file contents
-        "max_file_size": 1048576,  # Optional: max file size to return (1MB default)
-        "s3_bucket": "cds-peakscout-public"  # Optional: override default S3 bucket
+        "input_files": {
+            "peaks.bed": "chr1\t1000\t2000\n..."
+        },
+        "return_files": true,
+        "s3_bucket": "cds-peakscout-public"
     }
     """
     try:
         command = event.get('command')
         args = event.get('args', [])
+        input_files = event.get('input_files', {})
         return_files = event.get('return_files', True)
-        max_file_size = event.get('max_file_size', 1048576)  # 1MB default
+        max_file_size = event.get('max_file_size', 5242880)  # 5MB default
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
-        compress_response = event.get('compress_response', True)  # Enable compression by default
+        compress_response = event.get('compress_response', True)
         
         if not command:
             return {
@@ -271,13 +240,35 @@ def handler(event, context):
                 'body': json.dumps({'error': 'No command specified'})
             }
         
+        # Write uploaded files to /tmp
+        for filename, content in input_files.items():
+            file_path = f'/tmp/{filename}'
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                print(f"Wrote uploaded file: {filename} -> {file_path}")
+            except Exception as e:
+                return {
+                    'statusCode': 500,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+                    },
+                    'body': json.dumps({
+                        'error': f'Failed to write uploaded file {filename}: {str(e)}',
+                        'error_type': 'FileUploadError'
+                    })
+                }
+        
+        # Extract species from args to download reference data
         species = None
         for i, arg in enumerate(args):
             if arg == '--species' and i + 1 < len(args):
                 species = args[i + 1]
                 break
         
-        # Download and extract reference
+        # Download and extract reference data if species is specified
         ref_dir = None
         if species and species != 'test':  # Skip download for test species
             try:
@@ -297,10 +288,10 @@ def handler(event, context):
                     })
                 }
         
-        # Create /tmp
+        # Create temporary output directory in /tmp
         temp_output_dir = tempfile.mkdtemp(prefix='peakscout_output_', dir='/tmp')
         
-        # Process arguments and replace paths
+        # Process arguments and replace file paths with /tmp/ paths
         modified_args = []
         skip_next = False
         ref_dir_found = False
@@ -341,6 +332,15 @@ def handler(event, context):
                             'error_type': 'ReferenceDataError'
                         })
                     }
+            elif arg.startswith('--') and i + 1 < len(args):
+                # For file arguments, prepend /tmp/ to the path if file was uploaded
+                next_arg = args[i + 1]
+                if arg in ['--peak_file', '--gene_file'] and next_arg in input_files:
+                    modified_args.append(arg)
+                    modified_args.append(f'/tmp/{next_arg}')
+                    skip_next = True
+                else:
+                    modified_args.append(arg)
             else:
                 # Keep all other arguments as-is
                 modified_args.append(arg)
@@ -371,28 +371,35 @@ def handler(event, context):
             'ref_dir_used': ref_dir
         }
         
-        # Add debug information
+        # Add debug information if requested
         if event.get('debug', False):
             response_data['debug_info'] = {
                 'tmp_contents': list_tmp_contents(),
                 'ref_dir_contents': list_directory_contents(ref_dir) if ref_dir else "No reference directory"
             }
         
-        # If successful and return_files is enabled, collect output files
+        # If successful and return_files is enabled, return output files with compression
         if result.returncode == 0 and return_files:
             output_files = {}
             
             output_path = Path(temp_output_dir)
             if output_path.exists():
-                # Collect all files in output directory
+                # Process all output files
                 for file_path in output_path.rglob('*'):
                     if file_path.is_file():
                         try:
                             file_size = file_path.stat().st_size
                             relative_path = str(file_path.relative_to(output_path))
                             
-                            if file_size <= max_file_size:
-                                # For small files, include content with compression
+                            # Check if file is too large (>5MB)
+                            if file_size > max_file_size:
+                                output_files[relative_path] = {
+                                    'size': file_size,
+                                    'type': 'file_too_large',
+                                    'error': f'File too large ({file_size:,} bytes). Maximum supported: {max_file_size:,} bytes. Please reduce file size and try again.'
+                                }
+                            else:
+                                # Read and compress file content
                                 try:
                                     with open(file_path, 'r', encoding='utf-8') as f:
                                         content = f.read()
@@ -415,35 +422,10 @@ def handler(event, context):
                                         'size': file_size,
                                         'type': 'binary_base64'
                                     }
-                            else:
-                                # Large file - upload to S3 and provide URL
-                                s3_key = f"lambda-outputs/{context.aws_request_id}/{relative_path}"
-                                s3_bucket = event.get('output_s3_bucket', 'cds-peakscout-public')
-                                try:
-                                    s3_client = boto3.client('s3')
-                                    s3_client.upload_file(str(file_path), s3_bucket, s3_key)
-                                    s3_url = f"s3://{s3_bucket}/{s3_key}"
-                                    
-                                    output_files[relative_path] = {
-                                        'content': f'<FILE_UPLOADED_TO_S3: {s3_url}>',
-                                        'size': file_size,
-                                        'type': 's3_upload',
-                                        's3_url': s3_url,
-                                        's3_bucket': s3_bucket,
-                                        's3_key': s3_key
-                                    }
-                                    print(f"Uploaded {file_path} to S3: {s3_url}")
-                                except Exception as e:
-                                    output_files[relative_path] = {
-                                        'content': f'<UPLOAD_FAILED: {str(e)}>',
-                                        'size': file_size,
-                                        'type': 'upload_error'
-                                    }
                         except Exception as e:
                             output_files[relative_path] = {
-                                'content': f'<ERROR_READING_FILE: {str(e)}>',
-                                'size': 0,
-                                'type': 'error'
+                                'type': 'processing_error',
+                                'error': str(e)
                             }
             
             response_data['output_files'] = output_files
@@ -456,7 +438,7 @@ def handler(event, context):
         except Exception as e:
             response_data['cleanup_status'] = f'failed: {str(e)}'
         
-        #  response
+        # Prepare response
         status_code = 200 if result.returncode == 0 else 500
         response_body = json.dumps(response_data, indent=2)
         

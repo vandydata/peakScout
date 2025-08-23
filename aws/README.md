@@ -68,7 +68,7 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -d '{
     "command": "peak2gene",
     "args": [
-      "--peak_file", "test/2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak",
+      "--peak_file", "2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak",
       "--peak_type", "MACS2",
       "--species", "hg38",
       "--k", "1",
@@ -81,6 +81,47 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "debug": false
   }'
 
+
+curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "peak2gene",
+    "args": [
+      "--peak_file", "2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak",
+      "--peak_type", "MACS2",
+      "--species", "hg38",
+      "--k", "1",
+      "--output_name", "test_MACS2",
+      "--o", "test/results/",
+      "--output_type", "csv"
+    ],
+    "input_files": {
+      "uploaded_peaks.narrowPeak": "2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak"
+    },
+    "return_files": true
+  }'
+
+
+# defeat cli argument size limit
+python3 -c "
+import json
+with open('2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak', 'r') as f:
+    content = f.read()
+request = {
+    'command': 'peak2gene',
+    'args': ['--peak_file', 'peaks.narrowPeak', '--peak_type', 'MACS2', '--species', 'hg38', '--k', '1', '--output_name', 'test_MACS2', '--o', 'results/', '--output_type', 'csv'],
+    'input_files': {'peaks.narrowPeak': content},
+    'return_files': True
+}
+with open('temp_request.json', 'w') as f:
+    json.dump(request, f)
+"
+
+curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
+  -H "Content-Type: application/json" \
+  -d @temp_request.json
+
+rm temp_request.json
 
 # 3. In new terminal, check if test output is saved
 docker ps # and get process ID
