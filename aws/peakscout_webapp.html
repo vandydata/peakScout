@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PeakScout Lambda Interface</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #d9c8a9 0%, #a3a380 100%);
+    min-height: 100vh; padding: 20px; color:#2f2f2f;
+  }
+  .container { max-width: 1000px; margin:0 auto; background:#fff; border-radius:20px; box-shadow:0 20px 40px rgba(0,0,0,.08); overflow:hidden; }
+  .header { background:linear-gradient(45deg,#e8e1cd,#cdbea5); color:#4a4a4a; padding:30px; text-align:center; }
+  .header h1 { font-size:2.2rem; margin-bottom:6px; font-weight:800; }
+  .header p { opacity:.95; }
+  .form-container { padding:30px 34px; }
+  .form-group { margin-bottom:22px; }
+  label { display:block; margin-bottom:8px; font-weight:700; color:#4a4a4a; }
+  input, select { width:100%; padding:12px 14px; border:2px solid #d1c7b3; border-radius:10px; font-size:16px; transition: all .2s ease; }
+  input:focus, select:focus { outline:none; border-color:#bfa45d; box-shadow:0 0 0 3px rgba(191,164,93,.2); }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .file-upload { position:relative; display:inline-block; width:100%; }
+  .file-upload input[type=file] { position:absolute; opacity:0; width:100%; height:100%; cursor:pointer; }
+  .file-upload-label { display:flex; align-items:center; justify-content:center; padding:18px; border:2px dashed #bfbfbf; border-radius:10px; background:#f9f9f5; cursor:pointer; transition:all .2s ease; }
+  .file-upload-label:hover { border-color:#8a6f3f; background:#f4f1e9; }
+  .file-upload-label.has-file { border-color:#4d7c50; background:#ecf7ef; color:#4d7c50; }
+  .submit-btn { width:100%; padding:16px; background:linear-gradient(45deg,#8a6f3f,#5e503f); color:#fff; border:none; border-radius:12px; font-size:18px; font-weight:800; cursor:pointer; margin-top:6px; transition: all .2s ease; }
+  .submit-btn:hover { transform:translateY(-2px); box-shadow:0 10px 20px rgba(94,80,63,.28); }
+  .submit-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+  .loading { text-align:center; padding:30px; display:none; }
+  .loading.show { display:block; }
+  .spinner { width:40px; height:40px; border:4px solid #e5e7eb; border-top:4px solid #8a6f3f; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 12px; }
+  @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+  .results { margin-top:18px; padding: 20px 28px 30px; background:#f9f9f5; border-top:1px solid #e5e7eb; }
+  .error { background:#fef2f2; border:1px solid #f5b5b5; color:#b91c1c; padding:14px; border-radius:10px; }
+  .success { background:#f2f7f1; border:1px solid #c8e6c9; color:#2f5d2f; padding:14px; border-radius:10px; }
+  .download-btn { background:linear-gradient(45deg,#4d7c50,#2f5d2f); color:#fff; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700; margin: 8px 6px 0 0; }
+  .secondary-btn { background:#f4f1e9; color:#5e503f; border:1px solid #d1c7b3; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700; margin: 8px 6px 0 0; }
+  .card { margin:15px 0; padding:18px; border:2px solid #e5e7eb; border-radius:12px; background:#fff; }
+
+  /* Preview table */
+  .preview-wrap { margin-top:14px; border-top:1px solid #e5e7eb; padding-top:12px; }
+  .table-scroll { border:1px solid #e5e7eb; border-radius:10px; overflow:auto; max-height:420px; background:#fff; }
+  table.preview { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  table.preview thead th { position:sticky; top:0; background:#f4f1e9; border-bottom:1px solid #e5e7eb; padding:10px; text-align:left; font-weight:800; }
+  table.preview tbody td { border-bottom:1px solid #f3f4f6; padding:8px 10px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+  .muted { color:#6b7280; font-size:12px; }
+    .header .logo {
+    max-width: 180px;
+    height: auto;
+    display: block;
+    margin: 0 auto 12px auto;
+    }
+
+
+    .footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 40px;
+    font-size: 14px;
+    color: #4a4a4a;
+    }
+
+    .github-link {
+    display: inline-block;
+    margin-top: 8px;
+    }
+
+    .github-logo {
+    width: 36px;
+    height: 36px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    border-radius: 50%;
+    }
+
+    .github-logo:hover {
+    transform: scale(1.1);
+    opacity: 0.85;
+    }
+
+
+  @media (max-width: 820px) { .form-row { grid-template-columns:1fr; } }
+</style>
+
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+    <img src="logo.svg" alt="PeakScout Logo" class="logo" />
+    <p>peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results</p>
+
+    </div>
+
+
+    <div class="form-container">
+      <form id="peakscoutForm">
+        <div class="form-group">
+          <label for="peakFile">Peak File (BED/narrowPeak)</label>
+          <div class="file-upload">
+            <input type="file" id="peakFile" accept=".bed,.narrowPeak,.txt" required />
+            <div class="file-upload-label" id="fileLabel">📁 Choose your peak file...</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="peakType">Peak Type</label>
+            <select id="peakType" required>
+              <option value="MACS2">MACS2</option>
+              <option value="SEACR">SEACR</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="species">Species</label>
+            <select id="species" required>
+              <option value="dm6">Fruitfly (dm6)</option>
+              <option value="xenTro10">Frog (xenTro10)</option>
+              <option value="hg38">Human (hg38)</option>
+              <option value="hg19">Human (hg19)</option>
+              <option value="mm10">Mouse (mm10)</option>
+              <option value="mm39">Mouse (mm39)</option>
+              <option value="susScr11">Pig (susScr11)</option>
+              <option value="ce11">Worm (ce11)</option>
+              <option value="sacCer3">Yeast (sacCer3)</option>
+              <option value="danRer11">Zebrafish (danRer11)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="kValue">Number of Nearest Genes (k)</label>
+            <input type="number" id="kValue" value="3" min="1" max="10" required />
+          </div>
+          <div class="form-group">
+            <label for="outputName">Output Name</label>
+            <input type="text" id="outputName" value="peakscout_results" required />
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn" id="submitBtn">🚀 Run PeakScout Analysis</button>
+      </form>
+
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Running PeakScout analysis...</p>
+        <small class="muted">This may take a few minutes</small>
+      </div>
+
+      <div class="results" id="results"></div>
+    </div>
+  </div>
+
+  <script>
+    // ====== CONFIG ======
+    // For local SAM: 'http://localhost:9000/2015-03-31/functions/function/invocations'
+    // For API Gateway/Lambda URL: set to your deployed endpoint
+    const LAMBDA_ENDPOINT = 'http://localhost:9000/2015-03-31/functions/function/invocations';
+
+    // ====== DOM ======
+    const form = document.getElementById('peakscoutForm');
+    const fileInput = document.getElementById('peakFile');
+    const fileLabel = document.getElementById('fileLabel');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // ====== UTILS ======
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024, sizes = ['Bytes','KB','MB','GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    }
+    function b64ToBytes(b64) { return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+    function bytesToText(bytes) { return new TextDecoder().decode(bytes); }
+
+    function unwrapLambda(result) {
+      // Handle outer API Gateway/Lambda Proxy envelope
+      if (result && typeof result === 'object' && 'body' in result) {
+        if (result.isBase64Encoded) {
+          const compressed = b64ToBytes(result.body);
+          const jsonStr = pako.ungzip(compressed, { to: 'string' });
+          return JSON.parse(jsonStr);
+        }
+        if (typeof result.body === 'string') {
+          try { return JSON.parse(result.body); } catch { return result; }
+        }
+      }
+      // Already unwrapped (e.g., local invoke)
+      return result;
+    }
+
+    function saveTextAsCsv(filename, text) {
+      const blob = new Blob([text], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename.endsWith('.csv') ? filename : `${filename}.csv`;
+      document.body.appendChild(a);
+      a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // Decompress content_compressed payload to text
+    function decompressToText(fileData) {
+      if (!fileData) throw new Error('missing file data');
+
+      // Compressed content path
+      if (fileData.content_compressed && typeof fileData.content === 'string') {
+        const bytes = b64ToBytes(fileData.content);
+        if (fileData.compression_type === 'zstd') {
+          const decompressed = fzstd.decompress(bytes);
+          return bytesToText(decompressed);
+        }
+        if (fileData.compression_type === 'gzip') {
+          return pako.ungzip(bytes, { to: 'string' });
+        }
+        // Unknown compression label. try raw text decode
+        return bytesToText(bytes);
+      }
+
+      // Plain text path
+      if (fileData.type === 'text' && typeof fileData.content === 'string') {
+        return fileData.content;
+      }
+
+      // Oopsies
+      throw new Error('Not a text-CSV artifact (binary or unknown type).');
+    }
+
+    // Render CSV preview table (first N rows)
+    function renderCsvPreview(container, csvText, rowLimit = 20) {
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      const rows = parsed.data.slice(0, rowLimit);
+
+      if (!rows.length) {
+        container.innerHTML = '<div class="muted">(No rows to preview)</div>';
+        return;
+      }
+
+      // Build table
+      const tableWrap = document.createElement('div');
+      tableWrap.className = 'table-scroll';
+      const table = document.createElement('table');
+      table.className = 'preview';
+
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      const firstRow = rows[0];
+      for (let c = 0; c < firstRow.length; c++) {
+        const th = document.createElement('th');
+        th.textContent = `Col ${c+1}`;
+        headRow.appendChild(th);
+      }
+      thead.appendChild(headRow);
+
+      const tbody = document.createElement('tbody');
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        r.forEach(cell => {
+          const td = document.createElement('td');
+          td.title = (cell ?? '').toString();
+          td.textContent = (cell ?? '').toString();
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      tableWrap.appendChild(table);
+
+      container.innerHTML = '';
+      container.appendChild(tableWrap);
+      const note = document.createElement('div');
+      note.className = 'muted';
+      note.style.marginTop = '8px';
+      note.textContent = `Showing first ${rows.length} rows`;
+      container.appendChild(note);
+    }
+
+    async function downloadOutputFile(filename, fileData, fallbackName='results') {
+      try {
+        // Binary base64 path
+        if (fileData.type === 'binary_base64' && typeof fileData.content === 'string') {
+          const b = b64ToBytes(fileData.content);
+          const blob = new Blob([b]);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = filename || `${fallbackName}.bin`;
+          document.body.appendChild(a); a.click(); a.remove();
+          URL.revokeObjectURL(url);
+          return;
+        }
+
+        // Text path (possibly compressed)
+        const text = decompressToText(fileData);
+        saveTextAsCsv(filename || `${fallbackName}.csv`, text);
+      } catch (err) {
+        console.error('Download failed:', err);
+        alert(`Failed to download ${filename}: ${err.message}`);
+      }
+    }
+
+    function showError(message) {
+      results.innerHTML = `<div class="error"><h3>❌ Error</h3><p>${message}</p></div>`;
+    }
+
+    function displayResults(raw, outputName) {
+      const data = unwrapLambda(raw);
+
+      // If inner object has returncode, use it; else assume OK (local dev variants)
+      const ok = (typeof data.returncode === 'number') ? (data.returncode === 0) : true;
+      results.innerHTML = '';
+
+      if (!ok) {
+        const msg = data.stderr || data.error || 'Unknown error';
+        showError(`Analysis failed: ${msg}`);
+        return;
+      }
+
+      let html = '<div class="success"><h3>✅ Analysis Complete!</h3></div>';
+      if (data.command) {
+        html += `
+          <div class="card" style="border-left:4px solid #28a745;">
+            <h4>🖥️ Command Executed</h4>
+            <code style="font-size:12px; word-break:break-all;">${data.command}</code>
+          </div>`;
+      }
+      if (data.stdout && data.stdout.trim()) {
+        html += `
+          <div class="card" style="background:#fff7ed; border-left:4px solid #fb923c;">
+            <h4>ℹ️ Output</h4>
+            <pre style="font-size:12px; white-space:pre-wrap; margin:0;">${data.stdout}</pre>
+          </div>`;
+      }
+
+      // Files section
+      if (data.output_files && Object.keys(data.output_files).length > 0) {
+        html += '<h3 style="margin-top:8px;">📄 Output Files</h3>';
+        results.innerHTML = html; // mount early so we can append cards
+
+        Object.entries(data.output_files).forEach(([filename, fileData], idx) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <h4 style="margin:0 0 10px 0; color:#1f2937;">📊 ${filename}</h4>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px; margin-bottom:10px;">
+              <div><strong>Size:</strong> ${formatFileSize(fileData.size || 0)}</div>
+              <div><strong>Type:</strong> ${fileData.type || 'unknown'}</div>
+              ${fileData.content_compressed ? `<div><strong>Compressed:</strong> ${fileData.compression_type}</div>` : ''}
+            </div>
+            ${fileData.content_preview ? `
+              <div class="muted" style="margin-bottom:8px;">Preview (first 5 lines from Lambda)</div>
+              <pre style="background:#f8fafc; padding:10px; border-radius:8px; overflow-x:auto; font-size:11px; line-height:1.4;">${fileData.content_preview}</pre>
+            ` : ''}
+            <div>
+              <button class="secondary-btn" data-action="preview">👀 Preview table</button>
+              <button class="download-btn" data-action="download">📥 Download CSV</button>
+            </div>
+            <div class="preview-wrap" style="display:none;">
+              <div class="muted" style="margin-bottom:6px;">Rendering table preview…</div>
+              <div class="preview-mount"></div>
+            </div>
+          `;
+
+          
+          // Wire buttons
+          const previewBtn = card.querySelector('button[data-action="preview"]');
+          const downloadBtn = card.querySelector('button[data-action="download"]');
+          const previewWrap = card.querySelector('.preview-wrap');
+          const mount = card.querySelector('.preview-mount');
+
+          previewBtn.addEventListener('click', () => {
+            try {
+              const text = decompressToText(fileData);
+              previewWrap.style.display = 'block';
+              renderCsvPreview(mount, text, 20);
+            } catch (err) {
+              previewWrap.style.display = 'block';
+              mount.innerHTML = `<div class="error">Failed to preview: ${err.message}</div>`;
+            }
+          });
+
+          downloadBtn.addEventListener('click', () => {
+            downloadOutputFile(filename, fileData, outputName);
+          });
+
+          results.appendChild(card);
+        });
+        return;
+      }
+
+      // If no files, just show success + stdout
+      results.innerHTML = html;
+    }
+
+    // ====== UI Handlers ======
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        fileLabel.textContent = '📁 Choose your peak file...';
+        fileLabel.classList.remove('has-file');
+        fileLabel.style.color = '';
+        return;
+      }
+      const tooLarge = file.size > 5*1024*1024; // 5MB
+      const sizeInfo = tooLarge ? ' ⚠️ (Too large!)' : '';
+      fileLabel.textContent = `📁 ${file.name} (${formatFileSize(file.size)})${sizeInfo}`;
+      fileLabel.classList.add('has-file');
+      fileLabel.style.color = tooLarge ? '#dc2626' : '';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = fileInput.files[0];
+      if (!file) { alert('Please select a peak file'); return; }
+
+      // Show loading
+      loading.classList.add('show');
+      results.innerHTML = '';
+      submitBtn.disabled = true;
+
+      try {
+        // Enforce 5MB (aligns with Lambda code)
+        const maxSize = 5 * 1024 * 1024;
+        if (file.size > maxSize) {
+          throw new Error(`File too large (${formatFileSize(file.size)}). Max: ${formatFileSize(maxSize)}.`);
+        }
+
+        // Read file text
+        const content = await readFileAsText(file);
+        const outputName = document.getElementById('outputName').value;
+
+        const lambdaRequest = {
+          command: 'peak2gene',
+          args: [
+            '--peak_file', file.name,
+            '--peak_type', document.getElementById('peakType').value,
+            '--species', document.getElementById('species').value,
+            '--k', document.getElementById('kValue').value,
+            '--output_name', outputName,
+            '--o', 'results/',
+            '--output_type', 'csv'
+          ],
+          input_files: { [file.name]: content },
+          return_files: true,
+          debug: false
+        };
+
+        const resp = await fetch(LAMBDA_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lambdaRequest)
+        });
+
+        // Some local emulators return raw JSON, some wrap like Lambda proxy
+        const raw = await resp.json();
+        displayResults(raw, outputName);
+      } catch (err) {
+        console.error(err);
+        showError(`Error: ${err.message}`);
+      } finally {
+        loading.classList.remove('show');
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+
+  <footer class="footer">
+    <p>© 2025 PeakScout</p>
+    <a href="https://github.com/vandydata/peakScout" target="_blank" class="github-link">
+      <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" 
+           alt="peakScout's GitHub repository" class="github-logo" />
+    </a>
+  </footer>
+
+</body>
+</html>
+
