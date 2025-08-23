@@ -21,4 +21,4 @@ COPY test/ ${LAMBDA_TASK_ROOT}/test/
 RUN chmod +x ${LAMBDA_TASK_ROOT}/peakScout
 
 # Set the handler
-CMD ["lambda_handler.handler"]
+CMD ["lambda_handler.entrypoint"]

@@ -206,6 +206,7 @@ def get_preview(content, preview_lines=5):
     
     
 def handler(event, context):
+    
     """
     Lambda handler for peakScout - direct file uploads up to 5MB
     
@@ -491,3 +492,71 @@ def handler(event, context):
                 'error_type': type(e).__name__
             })
         }
+        
+        
+# ---- ADD THIS TO THE BOTTOM OF lambda_handler.py ----
+import json, base64
+
+def _cors_headers():
+    # keep in sync with what your frontend expects
+    return {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+    }
+
+def _ensure_cors(resp):
+    # Guarantee CORS headers on every response
+    if not isinstance(resp, dict):
+        # If your original handler sometimes returns plain strings, normalize
+        return {
+            "statusCode": 200,
+            "headers": _cors_headers(),
+            "body": json.dumps(resp),
+        }
+    headers = resp.get("headers", {}) or {}
+    headers.update(_cors_headers())
+    resp["headers"] = headers
+    # Ensure body is a string as Lambda expects
+    if "body" in resp and not isinstance(resp["body"], (str, bytes)):
+        resp["body"] = json.dumps(resp["body"])
+    return resp
+
+def entrypoint(event, context):
+    """
+    Wrapper for AWS Lambda Function URLs / API Gateway proxy events.
+    - Handles OPTIONS preflight.
+    - Unwraps event.body JSON (and base64 decode if needed).
+    - Then delegates to your existing `handler(payload, context)`.
+    """
+    # Preflight, some browsers will send this when content-yype is JSOn
+    method = (
+        event.get("requestContext", {})
+             .get("http", {})
+             .get("method")
+        or event.get("httpMethod")  # API GW REST
+    )
+    if method == "OPTIONS":
+        return {
+            "statusCode": 200,
+            "headers": _cors_headers(),
+            "body": "",
+        }
+
+    # 2Unwrap Function URL / API Gateway proxy envelope
+    payload = event
+    if "body" in event:
+        raw = event.get("body", "")
+        if event.get("isBase64Encoded"):
+            raw = base64.b64decode(raw).decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(raw) if isinstance(raw, str) and raw else {}
+        except Exception:
+            payload = {}
+
+    # Actually run peakScout handler
+    resp = handler(payload, context)
+
+    # Always attach CORS headers
+    return _ensure_cors(resp)
+

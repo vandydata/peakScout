@@ -139,7 +139,7 @@
           </div>
           <div class="form-group">
             <label for="outputName">Output Name</label>
-            <input type="text" id="outputName" value="peakscout_results" required />
+            <input type="text" id="outputName" value=".peakscout" required />
           </div>
         </div>
 
@@ -157,12 +157,13 @@
   </div>
 
   <script>
-    // ====== CONFIG ======
+    // Configuration
     // For local SAM: 'http://localhost:9000/2015-03-31/functions/function/invocations'
     // For API Gateway/Lambda URL: set to your deployed endpoint
-    const LAMBDA_ENDPOINT = 'http://localhost:9000/2015-03-31/functions/function/invocations';
+    //const LAMBDA_ENDPOINT = 'http://localhost:9000/2015-03-31/functions/function/invocations';
+    const LAMBDA_ENDPOINT = 'https://kc5rbxi6ve2fdvajzwvcdkeigi0hsnkb.lambda-url.us-east-1.on.aws/';
 
-    // ====== DOM ======
+    // DOM 
     const form = document.getElementById('peakscoutForm');
     const fileInput = document.getElementById('peakFile');
     const fileLabel = document.getElementById('fileLabel');
@@ -170,7 +171,7 @@
     const results = document.getElementById('results');
     const submitBtn = document.getElementById('submitBtn');
 
-    // ====== UTILS ======
+    // Utilities
     function formatFileSize(bytes) {
       if (bytes === 0) return '0 Bytes';
       const k = 1024, sizes = ['Bytes','KB','MB','GB'];
@@ -200,7 +201,7 @@
           try { return JSON.parse(result.body); } catch { return result; }
         }
       }
-      // Already unwrapped (e.g., local invoke)
+      // Already unwrapped (local invoke)
       return result;
     }
 
@@ -238,60 +239,65 @@
         return fileData.content;
       }
 
-      // Oopsies
+      // Boom!
       throw new Error('Not a text-CSV artifact (binary or unknown type).');
     }
 
     // Render CSV preview table (first N rows)
     function renderCsvPreview(container, csvText, rowLimit = 20) {
-      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-      const rows = parsed.data.slice(0, rowLimit);
+    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+    const rows = parsed.data.slice(0, rowLimit);
 
-      if (!rows.length) {
-        container.innerHTML = '<div class="muted">(No rows to preview)</div>';
-        return;
-      }
-
-      // Build table
-      const tableWrap = document.createElement('div');
-      tableWrap.className = 'table-scroll';
-      const table = document.createElement('table');
-      table.className = 'preview';
-
-      const thead = document.createElement('thead');
-      const headRow = document.createElement('tr');
-      const firstRow = rows[0];
-      for (let c = 0; c < firstRow.length; c++) {
-        const th = document.createElement('th');
-        th.textContent = `Col ${c+1}`;
-        headRow.appendChild(th);
-      }
-      thead.appendChild(headRow);
-
-      const tbody = document.createElement('tbody');
-      rows.forEach(r => {
-        const tr = document.createElement('tr');
-        r.forEach(cell => {
-          const td = document.createElement('td');
-          td.title = (cell ?? '').toString();
-          td.textContent = (cell ?? '').toString();
-          tr.appendChild(td);
-        });
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(thead);
-      table.appendChild(tbody);
-      tableWrap.appendChild(table);
-
-      container.innerHTML = '';
-      container.appendChild(tableWrap);
-      const note = document.createElement('div');
-      note.className = 'muted';
-      note.style.marginTop = '8px';
-      note.textContent = `Showing first ${rows.length} rows`;
-      container.appendChild(note);
+    if (!rows.length) {
+      container.innerHTML = '<div class="muted">(No rows to preview)</div>';
+      return;
     }
+
+    // Determine field order (prefer Papa's meta, fallback to keys from first row)
+    const fields = (parsed.meta && parsed.meta.fields && parsed.meta.fields.length)
+      ? parsed.meta.fields
+      : Object.keys(rows[0] || {});
+
+    // Build table
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'table-scroll';
+    const table = document.createElement('table');
+    table.className = 'preview';
+
+    // Header
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    fields.forEach((f) => {
+      const th = document.createElement('th');
+      th.textContent = f;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+
+    // Body
+    const tbody = document.createElement('tbody');
+    rows.forEach((r) => {
+      const tr = document.createElement('tr');
+      // If r is an object (header:true), pull values by field name.
+      // If it somehow ends up an array, fall back to index access.
+      fields.forEach((f, idx) => {
+        const td = document.createElement('td');
+        const val = (r && typeof r === 'object' && !Array.isArray(r)) ? r[f] : (r?.[idx]);
+        td.title = (val ?? '').toString();
+        td.textContent = (val ?? '').toString();
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+
+    // Inject into container
+    container.innerHTML = '';
+    container.appendChild(tableWrap);
+    tableWrap.appendChild(table);
+  }
 
     async function downloadOutputFile(filename, fileData, fallbackName='results') {
       try {
@@ -344,7 +350,7 @@
       if (data.stdout && data.stdout.trim()) {
         html += `
           <div class="card" style="background:#fff7ed; border-left:4px solid #fb923c;">
-            <h4>ℹ️ Output</h4>
+            <h4>ℹ️ Notices and warnings</h4>
             <pre style="font-size:12px; white-space:pre-wrap; margin:0;">${data.stdout}</pre>
           </div>`;
       }
@@ -453,7 +459,7 @@
             '--peak_type', document.getElementById('peakType').value,
             '--species', document.getElementById('species').value,
             '--k', document.getElementById('kValue').value,
-            '--output_name', outputName,
+            '--output_name', file.name + outputName,
             '--o', 'results/',
             '--output_type', 'csv'
           ],
