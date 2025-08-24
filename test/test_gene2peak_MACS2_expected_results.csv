@@ -1,0 +1,4 @@
+name,chr,start,end,closest_name_1,closest_name_1_dist,closest_name_2,closest_name_2_dist,closest_name_3,closest_name_3_dist
+Cpa6,chr1,10324720,10719945,sampleName.macs2_peak_5,0,sampleName.macs2_peak_4,-1917066,sampleName.macs2_peak_3,-2917811
+Rp1,chr1,3999557,4409241,sampleName.macs2_peak_2,849752,sampleName.macs2_peak_3,2996481,sampleName.macs2_peak_4,3997188
+Celf2,chr2,6539694,7509563,sampleName.macs2_peak_9,862455,sampleName.macs2_peak_7,-898589,sampleName.macs2_peak_6,-3177736
