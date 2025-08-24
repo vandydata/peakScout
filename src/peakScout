@@ -1,5 +1,19 @@
 #!/usr/bin/env python3
 
+# ------------------------------------------------------------------------------
+#                        __   _____                  __ 
+#      ____  ___  ____ _/ /__/ ___/_________  __  __/ /_
+#     / __ \/ _ \/ __ `/ //_/\__ \/ ___/ __ \/ / / / __/
+#    / /_/ /  __/ /_/ / ,<  ___/ / /__/ /_/ / /_/ / /_  
+#   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/  
+#  /_/                                                  
+#
+# Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
+# Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
+# https://github.com/vandydata/peakScout
+# 
+# ------------------------------------------------------------------------------
+
 import argparse
 from peak2gene import peak2gene
 from gene2peak import gene2peak

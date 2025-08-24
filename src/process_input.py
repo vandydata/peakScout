@@ -1,3 +1,17 @@
+# ------------------------------------------------------------------------------
+#                        __   _____                  __ 
+#      ____  ___  ____ _/ /__/ ___/_________  __  __/ /_
+#     / __ \/ _ \/ __ `/ //_/\__ \/ ___/ __ \/ / / / __/
+#    / /_/ /  __/ /_/ / ,<  ___/ / /__/ /_/ / /_/ / /_  
+#   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/  
+#  /_/                                                  
+#
+# Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
+# Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
+# https://github.com/vandydata/peakScout
+# 
+# ------------------------------------------------------------------------------
+
 import polars as pl
 import os
 
@@ -26,6 +40,8 @@ def process_peaks(
     if peak_type == "MACS2" and "xls" in file_path and not consensus:
         peaks = read_input_MACS2_xls(file_path)
     elif peak_type == "MACS2" and "bed" in file_path and not consensus:
+        peaks = read_input_MACS2_bed(file_path)
+    elif peak_type == "MACS2" and "narrowPeak" in file_path and not consensus:
         peaks = read_input_MACS2_bed(file_path)
     elif peak_type == "MACS2" and "bed" in file_path and consensus:
         peaks = read_input_MACS2_bed_consensus(file_path)
