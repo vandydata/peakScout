@@ -36,10 +36,19 @@ jobs:
         run: bash test/test_decomp.sh
 
       - name: Test MACS2 peak2gene
-        run: bash test/test_MACS2.sh
+        run: bash test/test_peak2gene_MACS2.sh
 
       - name: Test SEACR peak2gene
-        run: bash test/test_SEACR.sh
+        run: bash test/test_peak2gene_SEACR.sh
 
       - name: Test BED6 peak2gene
-        run: bash test/test_BED6.sh
+        run: bash test/test_peak2gene_BED6.sh
+
+      - name: Test MACS2 gene2peak
+        run: bash test/test_gene2peak_MACS2.sh
+
+      - name: Test SEACR gene2peak
+        run: bash test/test_gene2peak_SEACR.sh
+
+      - name: Test BED6 gene2peak
+        run: bash test/test_gene2peak_BED6.sh
