@@ -21,7 +21,7 @@ peakScout expects two inputs:
 1. A **peak file** (in BED6 format or as output from MACS2 or SEACR) 
 2. A **reference GTF file** containing gene annotations. The tool can decompose the GTF file into chromosome-specific collections of genomic features, which are then used to perform bidirectional mapping between peaks and genes.
 
-peakScount can be run:
+peakScount can be run via:
 - **Command line**: peakScout is designed to be run from the command line, making it accessible for users comfortable with terminal operations.
 - **Cloud computing**: for instanct access web access, we have set up peakScout in the cloud - https://vandydata.github.io/peakScout.
 
@@ -29,7 +29,7 @@ peakScount can be run:
 
 ## Installation
 
-## From source
+### From source
 
 These instructions should generally work without modification in linux-based environments. If you are using Windows, we strongly recommend you use WSL2 to have a Linux environment within Windows.
 ```bash
@@ -177,15 +177,4 @@ cd reference
 wget https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M37/gencode.vM37.basic.annotation.gtf.gz
 gunzip gencode.vM37.basic.annotation.gtf.gz
 ```
-
-
-## Notes
-
-Genomes to target: mm10, mm39, hg19, hg38
-
-Get annotations from Gencode, i.e. M25 for mm10 (which is aka GRCm38)
-
-From gencode files, we can get chr, start, end, feature name, feature type (`gene`, `transcript`, etc), and biotype (eg. `gene_type "TEC";`)
-
-Write a parser for the GTF data and at least get it into the lowest common denominator currently need, optimizations can come later
 
