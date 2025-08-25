@@ -179,7 +179,7 @@ def read_input_SEACR(file_path: str) -> pl.DataFrame:
     Outputs:
     None
     """
-    col_names = ["chr", "start", "end", "name", "score", "region"]
+    col_names = ["chr", "start", "end", "name", "max_signal", "region"]
     peaks = pl.read_csv(file_path, has_header=False, separator="\t")
 
     rename_columns = {f"column_{i+1}": col_names[i] for i in range(peaks.width)}
