@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PeakScout Lambda Interface</title>
+  <title>PeakScout - Annotate your peaks!</title>
+  <meta name="description" content="peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -11,34 +13,83 @@
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #d9c8a9 0%, #a3a380 100%);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     min-height: 100vh; padding: 20px; color:#2f2f2f;
   }
-  .container { max-width: 1000px; margin:0 auto; background:#fff; border-radius:20px; box-shadow:0 20px 40px rgba(0,0,0,.08); overflow:hidden; }
-  .header { background:linear-gradient(45deg,#e8e1cd,#cdbea5); color:#4a4a4a; padding:30px; text-align:center; }
-  .header h1 { font-size:2.2rem; margin-bottom:6px; font-weight:800; }
-  .header p { opacity:.95; }
-  .form-container { padding:30px 34px; }
-  .form-group { margin-bottom:22px; }
-  label { display:block; margin-bottom:8px; font-weight:700; color:#4a4a4a; }
-  input, select { width:100%; padding:12px 14px; border:2px solid #d1c7b3; border-radius:10px; font-size:16px; transition: all .2s ease; }
-  input:focus, select:focus { outline:none; border-color:#bfa45d; box-shadow:0 0 0 3px rgba(191,164,93,.2); }
-  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  .container { max-width: 800px; margin:0 auto; background:#fff; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.1); overflow:hidden; }
+  .header { background:linear-gradient(135deg,#ebe5da,#e8e1cd); color:#4a4a4a; padding:24px 30px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 24px; position: relative; }
+  .header-logo { 
+    width: 120px; 
+    height: auto; 
+    display: block;
+  }
+  .header-description { opacity:.9; font-size:15px; margin: 0; }
+  .header-links { position: absolute; top: 24px; right: 30px; display: flex; flex-direction: row; gap: 12px; align-items: center; }
+  .header-link { color: #4a4a4a; text-decoration: none; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 6px; background: rgba(255,255,255,0.3); transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 4px; }
+  .header-link:hover { background: rgba(255,255,255,0.5); transform: translateY(-1px); }
+  .header-link .material-symbols-outlined { font-size: 16px; }
+  
+  @media (max-width: 768px) {
+    .header { grid-template-columns: 1fr; justify-items: center; gap: 16px; }
+    .header-description { grid-column: 1; text-align: center; }
+    .header-links { position: static; align-items: center; }
+  }
+  .form-container { padding:40px; }
+  .form-group { margin-bottom:24px; }
+  label { display:block; margin-bottom:6px; font-weight:600; color:#4a4a4a; font-size:15px; }
+  .form-hint { font-size:13px; color:#6b7280; margin-bottom:8px; }
+  input, select { width:100%; padding:12px 16px; border:2px solid #e5e7eb; border-radius:8px; font-size:16px; transition: all .2s ease; background:#fff; }
+  input:focus, select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+  .form-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
   .file-upload { position:relative; display:inline-block; width:100%; }
   .file-upload input[type=file] { position:absolute; opacity:0; width:100%; height:100%; cursor:pointer; }
-  .file-upload-label { display:flex; align-items:center; justify-content:center; padding:18px; border:2px dashed #bfbfbf; border-radius:10px; background:#f9f9f5; cursor:pointer; transition:all .2s ease; }
-  .file-upload-label:hover { border-color:#8a6f3f; background:#f4f1e9; }
-  .file-upload-label.has-file { border-color:#4d7c50; background:#ecf7ef; color:#4d7c50; }
-  .submit-btn { width:100%; padding:16px; background:linear-gradient(45deg,#8a6f3f,#5e503f); color:#fff; border:none; border-radius:12px; font-size:18px; font-weight:800; cursor:pointer; margin-top:6px; transition: all .2s ease; }
-  .submit-btn:hover { transform:translateY(-2px); box-shadow:0 10px 20px rgba(94,80,63,.28); }
+  .file-upload-label { display:flex; align-items:center; justify-content:center; padding:20px; border:2px dashed #d1d5db; border-radius:8px; background:#f9fafb; cursor:pointer; transition:all .2s ease; font-size:15px; }
+  .file-upload-label:hover { border-color:#3b82f6; background:#eff6ff; }
+  .file-upload-label.has-file { border-color:#10b981; background:#ecfdf5; color:#10b981; }
+  .file-upload-label.error { border-color:#ef4444; background:#fef2f2; color:#ef4444; }
+  
+  /* Radio button styles */
+  .radio-group { 
+    display: flex; 
+    gap: 16px; 
+    margin-top: 8px; 
+    flex-wrap: nowrap;
+    align-items: center;
+    min-height: 48px;
+  }
+  .radio-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .radio-option input[type="radio"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #3b82f6;
+  }
+  .radio-option label {
+    margin: 0;
+    font-weight: 400;
+    cursor: pointer;
+    display: inline;
+    color: #4a4a4a;
+    font-size: 15px;
+  }
+  
+  .submit-btn { width:100%; padding:16px; background:#dbba35; color:#fff; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer; margin-top:16px; transition: all .2s ease; }
+  .submit-btn:hover { transform:translateY(-1px); box-shadow:0 8px 25px rgba(59,130,246,.3); }
   .submit-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
-  .loading { text-align:center; padding:30px; display:none; }
+  .loading { text-align:center; padding:40px; display:none; }
   .loading.show { display:block; }
-  .spinner { width:40px; height:40px; border:4px solid #e5e7eb; border-top:4px solid #8a6f3f; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 12px; }
+  .spinner { width:32px; height:32px; border:3px solid #e5e7eb; border-top:3px solid #3b82f6; border-radius:50%; animation: spin 1s linear infinite; margin:0 auto 16px; }
   @keyframes spin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
-  .results { margin-top:18px; padding: 20px 28px 30px; background:#f9f9f5; border-top:1px solid #e5e7eb; }
-  .error { background:#fef2f2; border:1px solid #f5b5b5; color:#b91c1c; padding:14px; border-radius:10px; }
-  .success { background:#f2f7f1; border:1px solid #c8e6c9; color:#2f5d2f; padding:14px; border-radius:10px; }
+  .results { margin-top:20px; padding-top: 10px; border-radius:0 0 16px 16px; display:none; }
+  .results.show { display:block; }
+  .error { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:16px; border-radius:8px; font-size:15px; }
+  .success { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:16px; border-radius:8px; font-size:15px; }
+  .validation-error { color:#dc2626; font-size:13px; margin-top:4px; display:none; }
   .download-btn { background:linear-gradient(45deg,#4d7c50,#2f5d2f); color:#fff; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700; margin: 8px 6px 0 0; }
   .secondary-btn { background:#f4f1e9; color:#5e503f; border:1px solid #d1c7b3; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700; margin: 8px 6px 0 0; }
   .card { margin:15px 0; padding:18px; border:2px solid #e5e7eb; border-radius:12px; background:#fff; }
@@ -46,43 +97,108 @@
   /* Preview table */
   .preview-wrap { margin-top:14px; border-top:1px solid #e5e7eb; padding-top:12px; }
   .table-scroll { border:1px solid #e5e7eb; border-radius:10px; overflow:auto; max-height:420px; background:#fff; }
-  table.preview { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  table.preview { width:100%; border-collapse:separate; border-spacing:0; font-size:12px; }
   table.preview thead th { position:sticky; top:0; background:#f4f1e9; border-bottom:1px solid #e5e7eb; padding:10px; text-align:left; font-weight:800; }
+  table.preview thead th.closest-col { background:#dbba35; color:#fff; }
   table.preview tbody td { border-bottom:1px solid #f3f4f6; padding:8px 10px; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
   .muted { color:#6b7280; font-size:12px; }
     .header .logo {
-    max-width: 180px;
+    max-width: 120px;
     height: auto;
     display: block;
     margin: 0 auto 12px auto;
     }
 
-
     .footer {
-    text-align: center;
-    padding: 20px;
-    margin-top: 40px;
+      text-align: center;
+      padding: 10px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #4a4a4a;
+    }
+    .footer p {
+      margin: 6px 0;
+    }
+
+    /* General Material Icons alignment */
+    .material-symbols-outlined {
+      vertical-align: middle;
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    /* Specific alignment for headings */
+    h3 .material-symbols-outlined,
+    h4 .material-symbols-outlined {
+      vertical-align: text-top;
+      margin-right: 8px;
+    }
+
+    /* Button icon alignment */
+    .secondary-btn .material-symbols-outlined,
+    .download-btn .material-symbols-outlined,
+      .download-btn:hover { transform:translateY(-1px); box-shadow:0 8px 25px rgba(59,130,246,.3); }
+
+    .submit-btn .material-symbols-outlined {
+      margin-right: 8px;
+      vertical-align: middle;
+      font-size: 18px;
+    }
+
+    /* File upload label icon alignment */
+    .file-upload-label .material-symbols-outlined {
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    /* Button container styling */
+    .button-container {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .secondary-btn, .download-btn {
+      display: inline-flex;
+      align-items: center;
+      margin: 0;
+      height: 40px;
+      box-sizing: border-box;
+    }
+
+  /* Icon alignment within buttons */
+  .secondary-btn .material-symbols-outlined,
+  .download-btn .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* Job details toggle */
+  .job-details-toggle {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    cursor: pointer;
     font-size: 14px;
-    color: #4a4a4a;
-    }
+    text-decoration: underline;
+    margin: 12px 0;
+    padding: 0;
+  }
+  .job-details-toggle:hover {
+    color: #1d4ed8;
+  }
+  .job-details {
+    display: none;
+  }
+  .job-details.show {
+    display: block;
+  }
 
-    .github-link {
-    display: inline-block;
-    margin-top: 8px;
-    }
-
-    .github-logo {
-    width: 36px;
-    height: 36px;
-    transition: transform 0.2s ease, opacity 0.2s ease;
-    border-radius: 50%;
-    }
-
-    .github-logo:hover {
-    transform: scale(1.1);
-    opacity: 0.85;
-    }
-
+  p small { font-size:12px; color:#6b7280; margin-bottom:20px; padding-bottom:20px; }
 
   @media (max-width: 820px) { .form-row { grid-template-columns:1fr; } }
 </style>
@@ -91,36 +207,69 @@
 <body>
   <div class="container">
     <div class="header">
-    <img src="logo.svg" alt="PeakScout Logo" class="logo" />
-    <p>peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results</p>
-
+      <img src="logo.svg" alt="PeakScout Logo" class="header-logo" />
+      <p class="header-description">peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results</p>
+      <div class="header-links">
+        <a href="#" class="header-link" title="Research article (coming soon)">
+          <span class="material-symbols-outlined">article</span>
+          DOI
+        </a>
+        <a href="https://github.com/vandydata/peakScout" class="header-link" title="View source code">
+          <span class="material-symbols-outlined">code</span>
+          GitHub
+        </a>
+      </div>
     </div>
-
 
     <div class="form-container">
       <form id="peakscoutForm">
         <div class="form-group">
-          <label for="peakFile">Peak File (BED/narrowPeak)</label>
+          <label for="peakFile">Peak File</label>
+          <div class="form-hint">Select MACS2, SEACR or BED file (max 4.5 MB)</div>
           <div class="file-upload">
             <input type="file" id="peakFile" accept=".bed,.narrowPeak,.txt" required />
-            <div class="file-upload-label" id="fileLabel">📁 Choose your peak file...</div>
+            <div class="file-upload-label" id="fileLabel"><span class="material-symbols-outlined">folder_open</span> Choose your peak file...</div>
           </div>
+          <div class="validation-error" id="fileError">Please select a valid file under 4.5 MB</div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
             <label for="peakType">Peak Type</label>
+            <div class="form-hint">Select your peak caller format</div>
             <select id="peakType" required>
+              <option value="BED6">BED6</option>
               <option value="MACS2">MACS2</option>
               <option value="SEACR">SEACR</option>
             </select>
+            <div class="validation-error" id="peakTypeError">Please select a valid peak type</div>
+          </div>
+          <div class="form-group">
+            <label>Number of Nearest Genes</label>
+            <div class="form-hint">How many genes per peak</div>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="kValue1" name="kValue" value="1" required checked />
+                <label for="kValue1">1</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="kValue2" name="kValue" value="2" required />
+                <label for="kValue2">2</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="kValue3" name="kValue" value="3" required />
+                <label for="kValue3">3</label>
+              </div>
+            </div>
+            <div class="validation-error" id="kValueError">Please select a valid number of genes (1-3)</div>
           </div>
           <div class="form-group">
             <label for="species">Species</label>
+            <div class="form-hint">Reference genome used</div>
             <select id="species" required>
               <option value="dm6">Fruitfly (dm6)</option>
               <option value="xenTro10">Frog (xenTro10)</option>
-              <option value="hg38">Human (hg38)</option>
+              <option value="hg38" selected>Human (hg38)</option>
               <option value="hg19">Human (hg19)</option>
               <option value="mm10">Mouse (mm10)</option>
               <option value="mm39">Mouse (mm39)</option>
@@ -129,21 +278,19 @@
               <option value="sacCer3">Yeast (sacCer3)</option>
               <option value="danRer11">Zebrafish (danRer11)</option>
             </select>
+            <div class="validation-error" id="speciesError">Please select a valid species</div>
           </div>
         </div>
 
         <div class="form-row">
-          <div class="form-group">
-            <label for="kValue">Number of Nearest Genes (k)</label>
-            <input type="number" id="kValue" value="3" min="1" max="10" required />
-          </div>
-          <div class="form-group">
+          
+          <!--<div class="form-group">
             <label for="outputName">Output Name</label>
             <input type="text" id="outputName" value=".peakscout" required />
-          </div>
+          </div>-->
         </div>
 
-        <button type="submit" class="submit-btn" id="submitBtn">🚀 Run PeakScout Analysis</button>
+        <button type="submit" class="submit-btn" id="submitBtn"><span class="material-symbols-outlined">search_insights</span> Run PeakScout Analysis</button>
       </form>
 
       <div class="loading" id="loading">
@@ -270,6 +417,9 @@
     fields.forEach((f) => {
       const th = document.createElement('th');
       th.textContent = f;
+      if (f.toLowerCase().startsWith('closest_')) {
+        th.classList.add('closest-col');
+      }
       headRow.appendChild(th);
     });
     thead.appendChild(headRow);
@@ -278,8 +428,8 @@
     const tbody = document.createElement('tbody');
     rows.forEach((r) => {
       const tr = document.createElement('tr');
-      // If r is an object (header:true), pull values by field name.
-      // If it somehow ends up an array, fall back to index access.
+      // If r is an object (header:true), pull values by field name
+      // If it somehow ends up an array, fall back to index acces
       fields.forEach((f, idx) => {
         const td = document.createElement('td');
         const val = (r && typeof r === 'object' && !Array.isArray(r)) ? r[f] : (r?.[idx]);
@@ -323,7 +473,8 @@
     }
 
     function showError(message) {
-      results.innerHTML = `<div class="error"><h3>❌ Error</h3><p>${message}</p></div>`;
+      results.innerHTML = `<div class="error"><h3><span class="material-symbols-outlined">error</span> Error</h3><p>${message}</p></div>`;
+      results.classList.add('show');
     }
 
     function displayResults(raw, outputName) {
@@ -332,6 +483,7 @@
       // If inner object has returncode, use it; else assume OK (local dev variants)
       const ok = (typeof data.returncode === 'number') ? (data.returncode === 0) : true;
       results.innerHTML = '';
+      results.classList.add('show');
 
       if (!ok) {
         const msg = data.stderr || data.error || 'Unknown error';
@@ -339,126 +491,246 @@
         return;
       }
 
-      let html = '<div class="success"><h3>✅ Analysis Complete!</h3></div>';
-      if (data.command) {
+      let html = '<div class="success"><h3><span class="material-symbols-outlined">check_circle</span> Analysis Complete!</h3></div>';
+
+      // Add job details toggle right after success message
+      let hasJobDetails = data.command || (data.stdout && data.stdout.trim()) || (data.output_files && Object.values(data.output_files).some(file => file.content_preview));
+      if (hasJobDetails) {
         html += `
-          <div class="card" style="border-left:4px solid #28a745;">
-            <h4>🖥️ Command Executed</h4>
-            <code style="font-size:12px; word-break:break-all;">${data.command}</code>
-          </div>`;
-      }
-      if (data.stdout && data.stdout.trim()) {
-        html += `
-          <div class="card" style="background:#fff7ed; border-left:4px solid #fb923c;">
-            <h4>ℹ️ Notices and warnings</h4>
-            <pre style="font-size:12px; white-space:pre-wrap; margin:0;">${data.stdout}</pre>
-          </div>`;
+          <button class="job-details-toggle" onclick="this.nextElementSibling.classList.toggle('show'); this.textContent = this.nextElementSibling.classList.contains('show') ? 'Hide job details' : 'Show job details';">Show job details</button>
+          <div class="job-details">
+            ${data.command ? `
+              <div class="card" style="border-left:4px solid #28a745; margin-bottom:12px;">
+                <h4><span class="material-symbols-outlined">terminal</span> Command Executed</h4>
+                <code style="font-size:12px; word-break:break-all;">${data.command}</code>
+              </div>
+            ` : ''}
+            ${data.stdout && data.stdout.trim() ? `
+              <div class="card" style="background:#fff7ed; border-left:4px solid #fb923c; margin-bottom:12px;">
+                <h4><span class="material-symbols-outlined">info</span> Notices and warnings</h4>
+                <pre style="font-size:12px; white-space:pre-wrap; margin:0;">${data.stdout}</pre>
+              </div>
+            ` : ''}
+            ${data.output_files && Object.values(data.output_files).some(file => file.content_preview) ? `
+              <div class="card" style="margin-bottom:12px;">
+                <h4><span class="material-symbols-outlined">visibility</span> Lambda Preview</h4>
+                ${Object.entries(data.output_files).map(([filename, fileData]) => 
+                  fileData.content_preview ? `
+                    <div class="muted" style="margin-bottom:8px;">Preview (first 5 lines from Lambda) - ${filename}</div>
+                    <pre style="background:#f8fafc; padding:10px; border-radius:8px; overflow-x:auto; font-size:11px; line-height:1.4;">${fileData.content_preview}</pre>
+                  ` : ''
+                ).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
       }
 
       // Files section
       if (data.output_files && Object.keys(data.output_files).length > 0) {
-        html += '<h3 style="margin-top:8px;">📄 Output Files</h3>';
+        html += '<h3 style="margin-top:8px;">Results</h3>';
         results.innerHTML = html; // mount early so we can append cards
 
         Object.entries(data.output_files).forEach(([filename, fileData], idx) => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <h4 style="margin:0 0 10px 0; color:#1f2937;">📊 ${filename}</h4>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px; margin-bottom:10px;">
-              <div><strong>Size:</strong> ${formatFileSize(fileData.size || 0)}</div>
-              <div><strong>Type:</strong> ${fileData.type || 'unknown'}</div>
-              ${fileData.content_compressed ? `<div><strong>Compressed:</strong> ${fileData.compression_type}</div>` : ''}
+          const fileSection = document.createElement('div');
+
+          fileSection.innerHTML = `
+           <div class="button-container" style="margin-top:12px;margin-bottom:12px;">
+              <button class="download-btn" data-action="download"><span class="material-symbols-outlined">download</span> Download ${filename} (${formatFileSize(fileData.size || 0)})</button>
             </div>
-            ${fileData.content_preview ? `
-              <div class="muted" style="margin-bottom:8px;">Preview (first 5 lines from Lambda)</div>
-              <pre style="background:#f8fafc; padding:10px; border-radius:8px; overflow-x:auto; font-size:11px; line-height:1.4;">${fileData.content_preview}</pre>
-            ` : ''}
-            <div>
-              <button class="secondary-btn" data-action="preview">👀 Preview table</button>
-              <button class="download-btn" data-action="download">📥 Download CSV</button>
-            </div>
-            <div class="preview-wrap" style="display:none;">
-              <div class="muted" style="margin-bottom:6px;">Rendering table preview…</div>
+            
+            <div class="preview-wrap">
+              <div class="muted" style="margin-bottom:6px;">Data preview:</div>
               <div class="preview-mount"></div>
             </div>
+            
           `;
 
-          
-          // Wire buttons
-          const previewBtn = card.querySelector('button[data-action="preview"]');
-          const downloadBtn = card.querySelector('button[data-action="download"]');
-          const previewWrap = card.querySelector('.preview-wrap');
-          const mount = card.querySelector('.preview-mount');
+          // Wire download button and auto-render preview
+          const downloadBtn = fileSection.querySelector('button[data-action="download"]');
+          const mount = fileSection.querySelector('.preview-mount');
 
-          previewBtn.addEventListener('click', () => {
-            try {
-              const text = decompressToText(fileData);
-              previewWrap.style.display = 'block';
-              renderCsvPreview(mount, text, 20);
-            } catch (err) {
-              previewWrap.style.display = 'block';
-              mount.innerHTML = `<div class="error">Failed to preview: ${err.message}</div>`;
-            }
-          });
+          // Auto-render preview table
+          try {
+            const text = decompressToText(fileData);
+            renderCsvPreview(mount, text, 20);
+          } catch (err) {
+            mount.innerHTML = `<div class="error">Failed to preview: ${err.message}</div>`;
+          }
 
           downloadBtn.addEventListener('click', () => {
             downloadOutputFile(filename, fileData, outputName);
           });
 
-          results.appendChild(card);
+          results.appendChild(fileSection);
         });
         return;
       }
 
-      // If no files, just show success + stdout
+      // If no files, just show success
+      // TODO - we should handle this better, it means something went wrong in Lambda
       results.innerHTML = html;
     }
 
-    // ====== UI Handlers ======
+    // Validation constants
+    const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB
+    const VALID_PEAK_TYPES = ['BED6', 'MACS2', 'SEACR'];
+    const VALID_SPECIES = ['dm6', 'xenTro10', 'hg38', 'hg19', 'mm10', 'mm39', 'susScr11', 'ce11', 'sacCer3', 'danRer11'];
+    const VALID_K_VALUES = ['1', '2', '3'];
+
+    // Validation functions
+    function validateFile(file) {
+      if (!file) return { valid: false, message: 'Please select a file' };
+      if (file.size > MAX_FILE_SIZE) {
+        return { valid: false, message: `File too large (${formatFileSize(file.size)}). Maximum size: ${formatFileSize(MAX_FILE_SIZE)}` };
+      }
+      const validExtensions = ['.bed', '.narrowpeak', '.txt'];
+      const hasValidExtension = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      if (!hasValidExtension) {
+        return { valid: false, message: 'Invalid file type. Please select a .bed, .narrowPeak, or .txt file' };
+      }
+      return { valid: true };
+    }
+
+    function validatePeakType(value) {
+      return VALID_PEAK_TYPES.includes(value);
+    }
+
+    function validateSpecies(value) {
+      return VALID_SPECIES.includes(value);
+    }
+
+    function validateKValue(value) {
+      return VALID_K_VALUES.includes(value);
+    }
+
+    function showFieldError(fieldId, message) {
+      const errorElement = document.getElementById(fieldId + 'Error');
+      if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+      }
+    }
+
+    function hideFieldError(fieldId) {
+      const errorElement = document.getElementById(fieldId + 'Error');
+      if (errorElement) {
+        errorElement.style.display = 'none';
+      }
+    }
+
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
+      hideFieldError('file');
+      
       if (!file) {
-        fileLabel.textContent = '📁 Choose your peak file...';
-        fileLabel.classList.remove('has-file');
-        fileLabel.style.color = '';
+        fileLabel.innerHTML = '<span class="material-symbols-outlined">folder_open</span> Choose your peak file...';
+        fileLabel.classList.remove('has-file', 'error');
         return;
       }
-      const tooLarge = file.size > 5*1024*1024; // 5MB
-      const sizeInfo = tooLarge ? ' ⚠️ (Too large!)' : '';
-      fileLabel.textContent = `📁 ${file.name} (${formatFileSize(file.size)})${sizeInfo}`;
-      fileLabel.classList.add('has-file');
-      fileLabel.style.color = tooLarge ? '#dc2626' : '';
+      
+      const validation = validateFile(file);
+      const sizeDisplay = formatFileSize(file.size);
+      
+      if (!validation.valid) {
+        fileLabel.innerHTML = `<span class="material-symbols-outlined">error</span> ${file.name} (${sizeDisplay})`;
+        fileLabel.classList.remove('has-file');
+        fileLabel.classList.add('error');
+        showFieldError('file', validation.message);
+      } else {
+        fileLabel.innerHTML = `<span class="material-symbols-outlined">check_circle</span> ${file.name} (${sizeDisplay})`;
+        fileLabel.classList.add('has-file');
+        fileLabel.classList.remove('error');
+      }
+    });
+
+    // Add validation event listeners
+    document.getElementById('peakType').addEventListener('change', (e) => {
+      hideFieldError('peakType');
+      if (!validatePeakType(e.target.value)) {
+        showFieldError('peakType', 'Invalid peak type selected');
+      }
+    });
+
+    document.getElementById('species').addEventListener('change', (e) => {
+      hideFieldError('species');
+      if (!validateSpecies(e.target.value)) {
+        showFieldError('species', 'Invalid species selected');
+      }
+    });
+
+    document.querySelectorAll('input[name="kValue"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        hideFieldError('kValue');
+        if (!validateKValue(e.target.value)) {
+          showFieldError('kValue', 'Invalid k value selected');
+        }
+      });
     });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Clear all previous errors
+      ['file', 'peakType', 'species', 'kValue'].forEach(hideFieldError);
+      results.innerHTML = '';
+      results.classList.remove('show');
+      
+      // Validate all fields
+      let hasErrors = false;
+      
+      // Validate file
       const file = fileInput.files[0];
-      if (!file) { alert('Please select a peak file'); return; }
+      const fileValidation = validateFile(file);
+      if (!fileValidation.valid) {
+        showFieldError('file', fileValidation.message);
+        hasErrors = true;
+      }
+      
+      // Validate peak type
+      const peakType = document.getElementById('peakType').value;
+      if (!validatePeakType(peakType)) {
+        showFieldError('peakType', 'Please select a valid peak type');
+        hasErrors = true;
+      }
+      
+      // Validate species
+      const species = document.getElementById('species').value;
+      if (!validateSpecies(species)) {
+        showFieldError('species', 'Please select a valid species');
+        hasErrors = true;
+      }
+      
+      // Validate k value
+      const kValueElement = document.querySelector('input[name="kValue"]:checked');
+      const kValue = kValueElement ? kValueElement.value : null;
+      if (!kValue || !validateKValue(kValue)) {
+        showFieldError('kValue', 'Please select a valid number of genes (1-3)');
+        hasErrors = true;
+      }
+      
+      // If there are validation errors, don't proceed
+      if (hasErrors) {
+        showError('Please fix the validation errors above before submitting.');
+        return;
+      }
 
       // Show loading
       loading.classList.add('show');
-      results.innerHTML = '';
       submitBtn.disabled = true;
 
       try {
-        // Enforce 5MB (aligns with Lambda code)
-        const maxSize = 5 * 1024 * 1024;
-        if (file.size > maxSize) {
-          throw new Error(`File too large (${formatFileSize(file.size)}). Max: ${formatFileSize(maxSize)}.`);
-        }
-
         // Read file text
         const content = await readFileAsText(file);
-        const outputName = document.getElementById('outputName').value;
+        const outputName = '.peakscout';
 
         const lambdaRequest = {
           command: 'peak2gene',
           args: [
             '--peak_file', file.name,
-            '--peak_type', document.getElementById('peakType').value,
-            '--species', document.getElementById('species').value,
-            '--k', document.getElementById('kValue').value,
+            '--peak_type', peakType,
+            '--species', species,
+            '--k', kValue,
             '--output_name', file.name + outputName,
             '--o', 'results/',
             '--output_type', 'csv'
@@ -474,7 +746,10 @@
           body: JSON.stringify(lambdaRequest)
         });
 
-        // Some local emulators return raw JSON, some wrap like Lambda proxy
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        }
+
         const raw = await resp.json();
         displayResults(raw, outputName);
       } catch (err) {
@@ -488,13 +763,9 @@
   </script>
 
   <footer class="footer">
-    <p>© 2025 PeakScout</p>
-    <a href="https://github.com/vandydata/peakScout" target="_blank" class="github-link">
-      <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" 
-           alt="peakScout's GitHub repository" class="github-logo" />
-    </a>
+    <p>If you use peakScout for a publication, please cite it! Thank you.</p>
+    <p>&copy; 2025 - <a href="https://cds.vanderbilt.edu">Creative Data Solutions</a>, Vanderbilt University</p>
   </footer>
 
 </body>
 </html>
-
