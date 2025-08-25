@@ -25,8 +25,6 @@ peakScount can be run via:
 - **Command line**: peakScout is designed to be run from the command line, making it accessible for users comfortable with terminal operations.
 - **Cloud computing**: for instanct access web access, we have set up peakScout in the cloud - https://vandydata.github.io/peakScout.
 
-
-
 ## Installation
 
 ### From source
