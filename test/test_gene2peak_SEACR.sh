@@ -4,9 +4,8 @@ peakScout gene2peak \
     --gene_file test/test_genes.txt \
     --peak_file test/test_SEACR.bed \
     --peak_type SEACR \
-    --species test \
     --k 3 \
-    --ref_dir test/test-reference \
+    --ref_dir test/test-reference/test \
     --output_name test_gene2peak_SEACR \
     --o test/results/ \
     --output_type csv

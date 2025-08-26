@@ -1,11 +1,11 @@
-chr,start,end,name,score,strand,closest_gene_name_1,closest_gene_name_1_dist,closest_gene_name_2,closest_gene_name_2_dist,closest_gene_name_3,closest_gene_name_3_dist
-1,4344147,4344187,peak_name_1,178,.,Rp1,0,Gm37483,19159,Gm6101,-83628
-1,5258993,5259502,peak_name_2,708,+,Gm7182,16604,Gm37567,48237,Atp6v1h,-96464
-1,7405722,7406909,peak_name_3,687,+,Gm18984,3770,Gm26901,-7853,Gm19002,-89260
-1,8406429,8407654,peak_name_4,100,-,Sntg1,0,Gm38024,43306,Gm16284,60772
-1,10551123,10551732,peak_name_5,137,-,Cpa6,0,Gm15604,2366,Gm25253,3822
-2,3361888,3361958,peak_name_6,578,+,Olah,0,Gm37525,-7884,Acbd7,-20895
-2,5641105,5641105,peak_name_7,181,.,Camk1d,0,Gm13216,-36944,Cdc123,153189
-2,7365263,7365293,peak_name_8,707,.,Celf2,0,Gm24340,-15070,Gm28641,164646
-2,8372018,8372078,peak_name_9,634,-,Gm24534,100016,Gm13254,-224153,Gm13255,261859
-2,11082018,11082078,peak_name_10,542,+,Gm26478,5703,Gm13297,8752,Gm13294,16855
+chr,start,end,name,score,strand,closest_gene_name_1,closest_gene_name_1_dist,closest_gene_name_2,closest_gene_name_2_dist,closest_gene_name_3,closest_gene_name_3_dist, ucsc_genome_browser_urls
+1,4344147,4344187,peak_name_1,178,.,Rp1,0,Gm37483,19159,Gm6101,-83628,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:4344047-4344287&highlight=chr1:4344147-4344187
+1,5258993,5259502,peak_name_2,708,+,Gm7182,16604,Gm37567,48237,Atp6v1h,-96464,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:5257720-5260774&highlight=chr1:5258993-5259502
+1,7405722,7406909,peak_name_3,687,+,Gm18984,3770,Gm26901,-7853,Gm19002,-89260,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:7402754-7409876&highlight=chr1:7405722-7406909
+1,8406429,8407654,peak_name_4,100,-,Sntg1,0,Gm38024,43306,Gm16284,60772,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:8403366-8410716&highlight=chr1:8406429-8407654
+1,10551123,10551732,peak_name_5,137,-,Cpa6,0,Gm15604,2366,Gm25253,3822,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:10549600-10553254&highlight=chr1:10551123-10551732
+2,3361888,3361958,peak_name_6,578,+,Olah,0,Gm37525,-7884,Acbd7,-20895,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr2:3361713-3362133&highlight=chr2:3361888-3361958
+2,5641105,5641105,peak_name_7,181,.,Camk1d,0,Gm13216,-36944,Cdc123,153189,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr2:5641105-5641105&highlight=chr2:5641105-5641105
+2,7365263,7365293,peak_name_8,707,.,Celf2,0,Gm24340,-15070,Gm28641,164646,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr2:7365188-7365368&highlight=chr2:7365263-7365293
+2,8372018,8372078,peak_name_9,634,-,Gm24534,100016,Gm13254,-224153,Gm13255,261859,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr2:8371868-8372228&highlight=chr2:8372018-8372078
+2,11082018,11082078,peak_name_10,542,+,Gm26478,5703,Gm13297,8752,Gm13294,16855,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr2:11081868-11082228&highlight=chr2:11082018-11082078

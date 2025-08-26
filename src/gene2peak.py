@@ -23,7 +23,6 @@ def gene2peak(
     peak_file: str,
     peak_type: str,
     gene_file: str,
-    species: str,
     num_features: int,
     ref_dir: str,
     output_name: str,
@@ -40,7 +39,6 @@ def gene2peak(
     peak_file (str): Path to the peak file.
     peak_type (str): Type of peak caller used to generate peak file (e.g. MACS2, SEACR, BED6).
     gene_file (str): Path to the gene file.
-    species (str): Species of the reference genome.
     num_features (int): Number of nearest features to find.
     ref_dir (str): Directory containing decomposed reference data.
     output_name (str): Name for output file.
@@ -59,7 +57,7 @@ def gene2peak(
     """
 
     peaks = process_peaks(peak_file, peak_type, option, boundary, consensus)
-    genes = process_genes(gene_file, species, ref_dir)
+    genes = process_genes(gene_file, ref_dir)
 
     decomposed_peaks = decompose_features(peaks)
     decomposed_genes = decompose_features(genes)
@@ -115,7 +113,9 @@ def find_nearest(
                     None,
                     None,
                     num_features,
-                    False,
+                    True,
+                    None,
+                    0.2
                 ),
             ]
         )

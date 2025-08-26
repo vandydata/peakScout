@@ -15,6 +15,7 @@
 # ------------------------------------------------------------------------------
 
 import argparse
+import json
 from peak2gene import peak2gene
 from gene2peak import gene2peak
 from decompose_ref import decompose_gtf
@@ -25,7 +26,7 @@ def main(args):
     peak_file = args.peak_file
     peak_type = args.peak_type
     gene_file = args.gene_file
-    species = args.species
+    species_genome = args.species_genome
     k = args.num_features
     ref = args.ref_dir
     output_name = args.output_name
@@ -38,32 +39,36 @@ def main(args):
     gtf_ref = args.gtf_ref
     consensus = args.consensus
     drop_columns = args.drop_columns
+    view_window = args.view_window
+
+    if species_genome is not None:
+        check_species(species_genome)
 
     if function == "peak2gene":
         peak2gene(
             peak_file,
             peak_type,
-            species,
             k,
             ref,
             output_name,
             out_dir,
             output_type,
+            species_genome,
             option,
             boundary,
             ub,
             db,
             consensus,
-            drop_columns
+            drop_columns,
+            view_window
         )
     elif function == "decompose":
-        decompose_gtf(ref, species, gtf_ref)
+        decompose_gtf(ref, gtf_ref)
     elif function == "gene2peak":
         gene2peak(
             peak_file,
             peak_type,
             gene_file,
-            species,
             k,
             ref,
             output_name,
@@ -76,6 +81,12 @@ def main(args):
     else:
         raise ValueError("Invalid peakScout call")
 
+def check_species(species_genome):
+    with open('src/utils/species_genomes.json') as f:
+        genomes = json.load(f)
+    
+    if species_genome not in genomes:
+        raise ValueError(f"Species/genome '{species_genome}' not recognized. Refer to src/utils/species_genomes.json for valid options.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="peakScout: find nearest features")
@@ -84,7 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--peak_file", type=str, help="Peak file")
     parser.add_argument("--peak_type", type=str, help="Peak type")
     parser.add_argument("--gene_file", type=str, help="Gene file")
-    parser.add_argument("--species", type=str, help="Species")
+    parser.add_argument("--species_genome", type=str, default=None, help="UCSC Species")
     parser.add_argument("--num_features", "--k", type=int, help="Number of features")
     parser.add_argument("--ref_dir", type=str, help="Reference directory")
     parser.add_argument("--output_name", type=str, help="Output name")
@@ -114,6 +125,7 @@ if __name__ == "__main__":
     parser.add_argument("--gtf_ref", "--gtf", type=str, help="File path to gtf")
     parser.add_argument('--consensus', action='store_true', help='Consensus peak file')
     parser.add_argument('--drop_columns', action='store_true', help='Only keep necessary columns from input file')
+    parser.add_argument('--view_window', type=float, default=0.2, help='Proportion of the peak region in entire genome browser window')
 
     args = parser.parse_args()
 

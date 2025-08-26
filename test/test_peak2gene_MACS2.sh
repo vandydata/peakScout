@@ -3,9 +3,9 @@
 peakScout peak2gene \
     --peak_file test/test_MACS2.bed \
     --peak_type MACS2 \
-    --species test \
+    --species_genome mm39 \
     --k 3 \
-    --ref_dir test/test-reference \
+    --ref_dir test/test-reference/test \
     --output_name test_peak2gene_MACS2 \
     --o test/results/ \
     --output_type csv

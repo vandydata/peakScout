@@ -24,6 +24,8 @@ def get_nearest_features(
     down_bound: int,
     k: int,
     drop_columns: bool,
+    species_genome: str,
+    view_window: float = 0.2
 ) -> pl.DataFrame:
     """
     Determine the nearest k features to each peak in roi using the reference
@@ -38,6 +40,8 @@ def get_nearest_features(
     down_bound (int): Maximum allowed distance between peak and downstream feature.
     k (int): Number of nearest features to collect.
     drop_columns (bool): Whether to drop unnecessary columns from the original file.
+    species_genome (str): Species of the reference genome.
+    view_window (float): Proportion of the peak region in entire genome browser window.
 
     Returns:
     return_roi (pl.DataFrame): Polars DataFrame containing peak information, the
@@ -178,7 +182,7 @@ def get_nearest_features(
 
         index += 1
 
-    return gen_return_roi(return_roi, feature, features_to_add, dists_to_add, k)
+    return gen_return_roi(return_roi, feature, features_to_add, dists_to_add, k, species_genome, view_window)
 
 
 def constrain_features(
@@ -304,6 +308,8 @@ def gen_return_roi(
     features_to_add: dict,
     dists_to_add: dict,
     k: int,
+    species_genome: str,
+    view_window: float = 0.2
 ) -> pl.DataFrame:
     """
     Generates Polars DataFrame containing peak information, the nearest k features to that peak,
@@ -316,6 +322,8 @@ def gen_return_roi(
     dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak
                          and the nth closest feature.
     k (int): Number of closest features to determine.
+    species_genome (str): Species of the reference genome.
+    view_window (float): Proportion of the peak region in entire genome browser window.
 
     Returns:
     return_roi (pl.DataFrame): Polars DataFrame containing peak information, the nearest k features to that peak,
@@ -333,7 +341,44 @@ def gen_return_roi(
                 ),
             ]
         )
+    
+    if species_genome:
+        species_genome_col = get_ucsc_browser_urls(species_genome, return_roi, view_window)
+        return_roi = return_roi.with_columns(
+            pl.Series("ucsc_genome_browser_urls", species_genome_col)
+        )
+
     return return_roi
+
+def get_ucsc_browser_urls(species_genome: str, df: pl.DataFrame, view_window: float=0.2) -> list:
+    """
+    Generates UCSC Genome Browser URLs for each peak in the DataFrame.
+
+    Parameters:
+    species_genome (str): Species of the reference genome.
+    df (pl.DataFrame): Polars DataFrame containing peak information.
+
+    Returns:
+    urls (list): List of UCSC Genome Browser URLs for each peak.
+
+    Outputs:
+    None
+    """
+    base_url = "https://genome.ucsc.edu/cgi-bin/hgTracks?db=" + species_genome + "&position="
+    highlight = "&highlight="
+    urls = []
+    
+    for row in df.iter_rows(named=True):
+        chr = row["chr"]
+        start = row["start"]
+        end = row["end"]
+        peak_length = end - start
+        window_start = max(1, int(start - peak_length / ((1 - view_window) / 2)))
+        window_end = int(end + peak_length / ((1 - view_window) / 2))
+        url = f"{base_url}chr{chr}:{window_start}-{window_end}{highlight}chr{chr}:{start}-{end}"
+        urls.append(url)
+    
+    return urls
 
 
 def gen_init(k: int) -> tuple[dict, dict]:

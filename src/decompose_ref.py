@@ -16,7 +16,7 @@ import polars as pl
 import os
 
 
-def decompose_gtf(ref_dir: str, species: str, gtf_ref: str) -> None:
+def decompose_gtf(ref_dir: str, gtf_ref: str) -> None:
     """
     Decompose a GTF file into its various features (i.e. gene, CDS, exon, etc.).
     Each feature is further decomposed by chromosome, and the start and end
@@ -24,7 +24,6 @@ def decompose_gtf(ref_dir: str, species: str, gtf_ref: str) -> None:
 
     Parameters:
     ref_dir (str): The directory to store the GTF decompositions.
-    species (str): The species to which the GTF corresponds.
     gtf_ref (str): The path to the GTF file.
 
     Returns:
@@ -34,7 +33,7 @@ def decompose_gtf(ref_dir: str, species: str, gtf_ref: str) -> None:
     The function will produce decomposed csv files and their parent directories
     as follows:
 
-                ref_dir/species/feature/chr{i}_[start | end].csv
+                ref_dir/feature/chr{i}_[start | end].csv
 
     where species is the species provided in the parameters, feature is the
     particular feature being decomposed (i.e. gene, CDS, exon, etc), i ranges
@@ -44,8 +43,8 @@ def decompose_gtf(ref_dir: str, species: str, gtf_ref: str) -> None:
     end position.
     """
 
-    if not os.path.exists(os.path.join(ref_dir, species)):
-        os.makedirs(os.path.join(ref_dir, species), exist_ok=True)
+    if not os.path.exists(ref_dir):
+        os.makedirs(ref_dir, exist_ok=True)
 
     col_names = [
         "chr",
@@ -75,13 +74,13 @@ def decompose_gtf(ref_dir: str, species: str, gtf_ref: str) -> None:
             (chr[0], name[0]): chr_group.sort("start").unique(subset="start")
             for chr, chr_group in group.group_by(["chr"])
         }
-        save_csvs(decomposed_dfs_start, "start", os.path.join(ref_dir, species))
+        save_csvs(decomposed_dfs_start, "start", ref_dir)
 
         decomposed_dfs_end = {
             chr_name: chr_group.sort("end")
             for chr_name, chr_group in decomposed_dfs_start.items()
         }
-        save_csvs(decomposed_dfs_end, "end", os.path.join(ref_dir, species))
+        save_csvs(decomposed_dfs_end, "end", ref_dir)
 
 
 def save_csvs(df: pl.DataFrame, col: str, out_dir: str) -> None:
