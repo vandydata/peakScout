@@ -23,7 +23,7 @@ def get_nearest_features(
     up_bound: int,
     down_bound: int,
     k: int,
-    preserve: bool,
+    drop_columns: bool,
 ) -> pl.DataFrame:
     """
     Determine the nearest k features to each peak in roi using the reference
@@ -37,7 +37,7 @@ def get_nearest_features(
     up_bound (int): Maximum allowed distance between peak and upstream feature.
     down_bound (int): Maximum allowed distance between peak and downstream feature.
     k (int): Number of nearest features to collect.
-    preserve (bool): If True, preserve the original columns of the roi DataFrame.
+    drop_columns (bool): Whether to drop unnecessary columns from the original file.
 
     Returns:
     return_roi (pl.DataFrame): Polars DataFrame containing peak information, the
@@ -55,7 +55,7 @@ def get_nearest_features(
     start_features = starts.select(feature).to_numpy().flatten()
     end_features = ends.select(feature).to_numpy().flatten()
 
-    if not preserve:
+    if drop_columns:
         return_roi = roi.select(["name", "chr", "start", "end"]).clone()
     else:
         return_roi = roi.clone()
@@ -325,24 +325,14 @@ def gen_return_roi(
     None
     """
     for i in range(1, k + 1):
-        if feature == "gene_name":
-            return_roi = return_roi.with_columns(
-                [
-                    pl.Series("closest_" + feature + "_" + str(i), features_to_add[i]),
-                    pl.Series(
-                        "closest_" + "gene" + "_" + str(i) + "_dist", dists_to_add[i]
-                    ),
-                ]
-            )
-        else:
-            return_roi = return_roi.with_columns(
-                [
-                    pl.Series("closest_" + feature + "_" + str(i), features_to_add[i]),
-                    pl.Series(
-                        "closest_" + feature + "_" + str(i) + "_dist", dists_to_add[i]
-                    ),
-                ]
-            )
+        return_roi = return_roi.with_columns(
+            [
+                pl.Series("closest_" + feature + "_" + str(i), features_to_add[i]),
+                pl.Series(
+                    "closest_" + feature + "_" + str(i) + "_dist", dists_to_add[i]
+                ),
+            ]
+        )
     return return_roi
 
 

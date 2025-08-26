@@ -34,7 +34,7 @@ def peak2gene(
     up_bound: int = None,
     down_bound: int = None,
     consensus: bool = False,
-    preserve: bool = False,
+    drop_columns: bool = False,
 ) -> None:
     """
     Find the nearest genes for a given list of peaks.
@@ -52,8 +52,8 @@ def peak2gene(
     boundary (int): Boundary for artificial peak boundary option. None if other options.
     up_bound (int): Maximum allowed distance between peak and upstream feature.
     down_bound (int): Maximum allowed distance between peak and downstream feature.
-    consnsesus (bool): Whether to use consensus peaks.
-    preserve (bool): Whether to preserve the original file columns.
+    consensus (bool): Whether to use consensus peaks. Default False.
+    drop_columns (bool): Whether to drop unnecessary columns from the original file. Default False.
 
     Returns:
     None
@@ -66,7 +66,7 @@ def peak2gene(
     peaks = process_peaks(peak_file, peak_type, option, boundary, consensus)
     decomposed_peaks = decompose_features(peaks)
     output = find_nearest(
-        decomposed_peaks, species, num_features, ref_dir, up_bound, down_bound, preserve
+        decomposed_peaks, species, num_features, ref_dir, up_bound, down_bound, drop_columns
     )
     if output_type == "xlsx":
         write_to_excel(output, output_name, out_dir)
@@ -83,7 +83,7 @@ def find_nearest(
     ref_dir: str,
     up_bound: int,
     down_bound: int,
-    preserve: bool,
+    drop_columns: bool,
 ) -> pd.DataFrame:
     """
     Find the nearest genes for a given list of peaks. Place these in a Pandas DataFrame.
@@ -96,6 +96,7 @@ def find_nearest(
     ref_dir (str): Directory containing decomposed reference data.
     up_bound (int): Maximum allowed distance between peak and upstream feature.
     down_bound (int): Maximum allowed distance between peak and downstream feature.
+    drop_columns (bool): Whether to drop unnecessary columns from the original file.
 
     Returns:
     output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak,
@@ -123,7 +124,7 @@ def find_nearest(
                         up_bound,
                         down_bound,
                         num_features,
-                        preserve,
+                        drop_columns,
                     ),
                 ]
             )

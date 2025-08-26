@@ -37,7 +37,7 @@ def main(args):
     db = args.down_bound
     gtf_ref = args.gtf_ref
     consensus = args.consensus
-    preserve = args.preserve
+    drop_columns = args.drop_columns
 
     if function == "peak2gene":
         peak2gene(
@@ -54,7 +54,7 @@ def main(args):
             ub,
             db,
             consensus,
-            preserve
+            drop_columns
         )
     elif function == "decompose":
         decompose_gtf(ref, species, gtf_ref)
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--gtf_ref", "--gtf", type=str, help="File path to gtf")
     parser.add_argument('--consensus', action='store_true', help='Consensus peak file')
-    parser.add_argument('--preserve', action='store_true', help='Preserve all columns in input file')
+    parser.add_argument('--drop_columns', action='store_true', help='Only keep necessary columns from input file')
 
     args = parser.parse_args()
 

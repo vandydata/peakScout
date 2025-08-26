@@ -251,7 +251,7 @@ def process_genes(file_path: str, species: str, ref_dir: str) -> pl.DataFrame:
     gene_df = pl.DataFrame()
     for csv in os.listdir(os.path.join(ref_dir, species, "gene")):
         cur = pl.read_csv(os.path.join(ref_dir, species, "gene", csv))
-        for gene in genes:
+        for gene in genes[:]:
             if gene in cur.select(["gene_name"]).to_numpy():
                 gene_df = pl.concat([gene_df, cur.filter(pl.col("gene_name") == gene)])
                 genes.remove(gene)
