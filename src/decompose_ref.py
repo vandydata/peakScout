@@ -1,15 +1,15 @@
 # ------------------------------------------------------------------------------
-#                        __   _____                  __ 
+#                        __   _____                  __
 #      ____  ___  ____ _/ /__/ ___/_________  __  __/ /_
 #     / __ \/ _ \/ __ `/ //_/\__ \/ ___/ __ \/ / / / __/
-#    / /_/ /  __/ /_/ / ,<  ___/ / /__/ /_/ / /_/ / /_  
-#   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/  
-#  /_/                                                  
+#    / /_/ /  __/ /_/ / ,<  ___/ / /__/ /_/ / /_/ / /_
+#   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/
+#  /_/
 #
 # Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
 # Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
 # https://github.com/vandydata/peakScout
-# 
+#
 # ------------------------------------------------------------------------------
 
 import polars as pl
@@ -59,12 +59,12 @@ def decompose_gtf(ref_dir: str, gtf_ref: str) -> None:
     ]
 
     full_df = pl.read_csv(
-        gtf_ref, 
-        has_header=False, 
-        separator="\t", 
-        skip_rows=5, 
+        gtf_ref,
+        has_header=False,
+        separator="\t",
+        skip_rows=5,
         new_columns=col_names,
-        schema_overrides={"chr": pl.String}
+        schema_overrides={"chr": pl.String},
     )
 
     for name, group in full_df.group_by(["feature"]):

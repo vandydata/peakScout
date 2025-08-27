@@ -1,15 +1,15 @@
 # ------------------------------------------------------------------------------
-#                        __   _____                  __ 
+#                        __   _____                  __
 #      ____  ___  ____ _/ /__/ ___/_________  __  __/ /_
 #     / __ \/ _ \/ __ `/ //_/\__ \/ ___/ __ \/ / / / __/
-#    / /_/ /  __/ /_/ / ,<  ___/ / /__/ /_/ / /_/ / /_  
-#   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/  
-#  /_/                                                  
+#    / /_/ /  __/ /_/ / ,<  ___/ / /__/ /_/ / /_/ / /_
+#   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/
+#  /_/
 #
 # Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
 # Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
 # https://github.com/vandydata/peakScout
-# 
+#
 # ------------------------------------------------------------------------------
 
 import pandas as pd
@@ -35,7 +35,7 @@ def peak2gene(
     down_bound: int = None,
     consensus: bool = False,
     drop_columns: bool = False,
-    view_window: float = 0.2
+    view_window: float = 0.2,
 ) -> None:
     """
     Find the nearest genes for a given list of peaks.
@@ -67,7 +67,14 @@ def peak2gene(
     peaks = process_peaks(peak_file, peak_type, option, boundary, consensus)
     decomposed_peaks = decompose_features(peaks)
     output = find_nearest(
-        decomposed_peaks, species_genome, num_features, ref_dir, up_bound, down_bound, drop_columns, view_window
+        decomposed_peaks,
+        species_genome,
+        num_features,
+        ref_dir,
+        up_bound,
+        down_bound,
+        drop_columns,
+        view_window,
     )
     if output_type == "xlsx":
         write_to_excel(output, output_name, out_dir)
@@ -85,7 +92,7 @@ def find_nearest(
     up_bound: int,
     down_bound: int,
     drop_columns: bool,
-    view_window: float
+    view_window: float,
 ) -> pd.DataFrame:
     """
     Find the nearest genes for a given list of peaks. Place these in a Pandas DataFrame.
@@ -111,9 +118,7 @@ def find_nearest(
     output = pl.DataFrame()
     for key in decomposed_peaks.keys():
         try:
-            starts = pl.read_csv(
-                os.path.join(ref_dir, "gene", key) + "_start.csv"
-            )
+            starts = pl.read_csv(os.path.join(ref_dir, "gene", key) + "_start.csv")
             ends = pl.read_csv(os.path.join(ref_dir, "gene", key) + "_end.csv")
             output = pl.concat(
                 [
@@ -128,7 +133,7 @@ def find_nearest(
                         num_features,
                         drop_columns,
                         species_genome,
-                        view_window
+                        view_window,
                     ),
                 ]
             )
