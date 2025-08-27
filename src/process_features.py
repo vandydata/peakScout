@@ -370,6 +370,7 @@ def get_ucsc_browser_urls(
     Parameters:
     species_genome (str): Species of the reference genome.
     df (pl.DataFrame): Polars DataFrame containing peak information.
+    view_window (float): Proportion of the peak region in entire genome browser window.
 
     Returns:
     urls (list): List of UCSC Genome Browser URLs for each peak.

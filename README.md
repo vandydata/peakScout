@@ -74,29 +74,63 @@ singularity exec peakscout_latest.sif peakScout --help
 ## Usage
 
 ### Decomposing Reference GTF
+The first step of peakScout is to create the decomposed reference.
+
+| Parameter  | Type  | Description                                   |
+|------------|-------|-----------------------------------------------|
+| `ref_dir`  | `str` | The directory to store the GTF decompositions.|
+| `gtf_ref`  | `str` | The path to the GTF file.                     |
+
 To decompose a reference GTF file so that it can be used by peakScout, run the following command
 ```bash
-peakScout decompose --ref_dir /path/to/where/outputs/stored --species species of gtf --gtf_ref /path/to/gtf/file
+peakScout decompose \
+--ref_dir /path/to/where/outputs/stored \
+--gtf_ref /path/to/gtf/file
 ```
 
 Specific example:
 
 ```bash
 peakScout decompose \
---ref_dir reference/ \
---species mm39 \
+--ref_dir reference/mm39/ \
 --gtf_ref reference/gencode.vM37.basic.annotation.gtf
 ```
 
-A directory called `reference/mm39` will be created and you will use the `mm39` as the species name in other peakScout operations.
+A directory called `reference/mm39` will be created and should be used as the `ref_dir` argument for downstream peakScout operations.
 
 ### Finding Nearest Genes
 
 Once a reference GTF has been decomposed, you can use the decomposition to find the nearest genes to your peaks. Peak files can be MACS2, SEACR outputs, or standard BED6 format files and can be Excel sheets or BED files.
 
+| Parameter       | Type    | Description                                                                          |
+|-----------------|---------|--------------------------------------------------------------------------------------|
+| `peak_file`     | `str`   | Path to the peak file.                                                               |
+| `peak_type`     | `str`   | Type of peak caller used to generate peak file (e.g. MACS2, SEACR, BED6).            |
+| `num_features`  | `int`   | Number of nearest features to find.                                                  |
+| `ref_dir`       | `str`   | Directory containing decomposed reference data.                                      |
+| `output_name`   | `str`   | Name for output file.                                                                |
+| `out_dir`       | `str`   | Directory to output file.                                                            |
+| `output_type`   | `str`   | Output type (csv file or xlsx file).                                                 |
+| `species_genome`| `str`   | Species of the reference genome.                                                     |
+| `option`        | `str`   | Option for defining start and end positions of peaks. Default native_peak_bounaries. |
+| `boundary`      | `int`   | Boundary for artificial peak boundary option. `None` if other options.               |
+| `up_bound`      | `int`   | Maximum allowed distance between peak and upstream feature. Default `None`.          |
+| `down_bound`    | `int`   | Maximum allowed distance between peak and downstream feature. Default `None`.        |
+| `consensus`     | `bool`  | Whether to use consensus peaks. Default `False`.                                     |
+| `drop_columns`  | `bool`  | Whether to drop unnecessary columns from the original file. Default `False`.         |
+| `view_window`   | `float` | Proportion of the peak region in entire genome browser window. Default `0.2`.        |
+
 Run the following command to create an Excel sheet containing the nearest k genes to your peaks
 ```bash
-peakScout peak2gene --peak_file /path/to/peak/file --peak_type MACS2/SEACR/BED6 --species species of gtf --k number of nearest genes --ref_dir /path/to/reference/directory --output_name name of output file --o /path/to/save/output --output_type csv/xslx
+peakScout peak2gene \
+--peak_file /path/to/peak/file \
+--peak_type MACS2/SEACR/BED6 \
+--species_genome UCSC-defined species of gtf \
+--k number of nearest genes \
+--ref_dir /path/to/reference/directory \
+--output_name name of output file \
+--o /path/to/save/output \
+--output_type csv/xslx
 ```
 
 Specific example:
@@ -105,21 +139,7 @@ Specific example:
 peakScout peak2gene \
 --peak_file test/test_MACS2.bed \
 --peak_type MACS2 \
---species mm39 \
---k 2 \
---ref_dir reference/mm39 \
---output_name peakScout_test_MACS2 \
---o my_output_dir \
---output_type xslx
-```
-
-Specific example:
-
-```bash
-peakScout peak2gene \
---peak_file test/test_MACS2.bed \
---peak_type MACS2 \
---species mm39 \
+--species_genome mm39 \
 --k 2 \
 --ref_dir reference/mm39 \
 --output_name peakScout_test_MACS2 \
@@ -129,16 +149,46 @@ peakScout peak2gene \
 
 ### Finding Nearest Peaks
 
-Once a reference GTF has been decomposed, you can use the decomposition to find the nearest peaks to a set of genes. Peak files can be MACS2, SEACR outputs, or standard BED6 format files and can be Excel sheets or BED files. Gene names should be in a single column CSV file with no header.
+Once a reference GTF has been decomposed, you can also use the decomposition to find the nearest peaks to a set of genes. Peak files can be MACS2, SEACR outputs, or standard BED6 format files and can be Excel sheets or BED files. Gene names should be in a single column CSV or txt file with no header.
+
+| Parameter      | Type   | Description                                                                           |
+|----------------|--------|---------------------------------------------------------------------------------------|
+| `peak_file`    | `str`  | Path to the peak file.                                                                |
+| `peak_type`    | `str`  | Type of peak caller used to generate peak file (e.g. MACS2, SEACR, BED6).             |
+| `gene_file`    | `str`  | Path to the gene file.                                                                |
+| `num_features` | `int`  | Number of nearest features to find.                                                   |
+| `ref_dir`      | `str`  | Directory containing decomposed reference data.                                       |
+| `output_name`  | `str`  | Name for output file.                                                                 |
+| `out_dir`      | `str`  | Directory to output file.                                                             |
+| `output_type`  | `str`  | Output type (csv file or xlsx file).                                                  |
+| `option`       | `str`  | Option for defining start and end positions of peaks. Default native_peak_boundaries. |
+| `boundary`     | `int`  | Boundary for artificial peak boundary option. `None`å if other options.               |
+| `consensus`    | `bool` | Whether to use consensus peaks. Default `False`.                                      |
 
 Run the following command to create an Excel sheet containing the nearest k peaks to your genes
 ```bash
-peakScout gene2peak --peak_file /path/to/peak/file --peak_type MACS2/SEACR/BED6 --gene_file /path/to/gene/file --species species of gtf --k number of nearest peaks --ref_dir /path/to/reference/directory --output_name name of output file --o /path/to/save/output --output_type csv/xslx
+peakScout gene2peak \
+--peak_file /path/to/peak/file \
+--peak_type MACS2/SEACR/BED6 \
+--gene_file /path/to/gene/file \
+--k number of nearest peaks \
+--ref_dir /path/to/reference/directory \
+--output_name name of output file \
+--o /path/to/save/output \
+--output_type csv/xslx
 ```
 
 Specific example:
 ```bash
-peakScout gene2peak --peak_file /path/to/peak/file --peak_type MACS2/SEACR/BED6 --gene_file /path/to/gene/file --species species of gtf --k number of nearest peaks --ref_dir /path/to/reference/directory --output_name name of output file --o /path/to/save/output --output_type csv/xslx
+peakScout gene2peak \
+--peak_file test/test_MACS2.bed \
+--peak_type MACS2 \
+--gene_file test/test_genes.txt \
+--k 3 \
+--ref_dir reference/mm39 \
+--output_name test_gene2peak_MACS2 \
+--o my_output_dir \
+--output_type csv
 ```
 
 ## peakScout ready-made references for common organisms

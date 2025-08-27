@@ -55,6 +55,7 @@ def peak2gene(
     down_bound (int): Maximum allowed distance between peak and downstream feature.
     consensus (bool): Whether to use consensus peaks. Default False.
     drop_columns (bool): Whether to drop unnecessary columns from the original file. Default False.
+    view_window (float): Proportion of the peak region in entire genome browser window. Default 0.2.
 
     Returns:
     None
