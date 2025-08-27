@@ -162,7 +162,7 @@ Once a reference GTF has been decomposed, you can also use the decomposition to 
 | `out_dir`      | `str`  | Directory to output file.                                                             |
 | `output_type`  | `str`  | Output type (csv file or xlsx file).                                                  |
 | `option`       | `str`  | Option for defining start and end positions of peaks. Default native_peak_boundaries. |
-| `boundary`     | `int`  | Boundary for artificial peak boundary option. `None`å if other options.               |
+| `boundary`     | `int`  | Boundary for artificial peak boundary option. `None` if other options.                |
 | `consensus`    | `bool` | Whether to use consensus peaks. Default `False`.                                      |
 
 Run the following command to create an Excel sheet containing the nearest k peaks to your genes
