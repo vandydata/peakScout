@@ -1,4 +1,4 @@
-chr,start,end,name,score,strand,closest_gene_name_1,closest_gene_name_1_dist,closest_gene_name_2,closest_gene_name_2_dist,closest_gene_name_3,closest_gene_name_3_dist, ucsc_genome_browser_urls
+chr,start,end,name,score,strand,closest_gene_name_1,closest_gene_name_1_dist,closest_gene_name_2,closest_gene_name_2_dist,closest_gene_name_3,closest_gene_name_3_dist,ucsc_genome_browser_urls
 1,4344147,4344187,peak_name_1,178,.,Rp1,0,Gm37483,19159,Gm6101,-83628,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:4344047-4344287&highlight=chr1:4344147-4344187
 1,5258993,5259502,peak_name_2,708,+,Gm7182,16604,Gm37567,48237,Atp6v1h,-96464,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:5257720-5260774&highlight=chr1:5258993-5259502
 1,7405722,7406909,peak_name_3,687,+,Gm18984,3770,Gm26901,-7853,Gm19002,-89260,https://genome.ucsc.edu/cgi-bin/hgTracks?db=mm39&position=chr1:7402754-7409876&highlight=chr1:7405722-7406909

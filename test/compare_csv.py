@@ -20,7 +20,7 @@ def compare_csv_files(file1, file2):
     headers1 = rows1[0]
     headers2 = rows2[0]
     if headers1 != headers2:
-        return False, "Headers are different"
+        raise Exception("Headers are different")
 
     rows1 = set(tuple(row) for row in rows1[1:])
     rows2 = set(tuple(row) for row in rows2[1:])
