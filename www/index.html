@@ -42,13 +42,22 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="peakType">Peak Type</label>
+            <label>Peak Type</label>
             <div class="form-hint">Select your peak caller format</div>
-            <select id="peakType" required>
-              <option value="BED6">BED6</option>
-              <option value="MACS2">MACS2</option>
-              <option value="SEACR">SEACR</option>
-            </select>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="peakTypeBED6" name="peakType" value="BED6" required />
+                <label for="peakTypeBED6">BED6</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="peakTypeMACS2" name="peakType" value="MACS2" required checked />
+                <label for="peakTypeMACS2">MACS2</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="peakTypeSEACR" name="peakType" value="SEACR" required />
+                <label for="peakTypeSEACR">SEACR</label>
+              </div>
+            </div>
             <div class="validation-error" id="peakTypeError">Please select a valid peak type</div>
           </div>
           <div class="form-group">
@@ -70,6 +79,9 @@
             </div>
             <div class="validation-error" id="kValueError">Please select a valid number of genes (1-3)</div>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label for="species">Species</label>
             <div class="form-hint">Reference genome used</div>
@@ -87,10 +99,21 @@
             </select>
             <div class="validation-error" id="speciesError">Please select a valid species</div>
           </div>
-        </div>
-
-        <div class="form-row">
-          
+          <div class="form-group">
+            <label>Output Format</label>
+            <div class="form-hint">Choose download format</div>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="outputTypeXlsx" name="outputType" value="xlsx" required checked />
+                <label for="outputTypeXlsx">Excel (.xlsx)</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="outputTypeCsv" name="outputType" value="csv" required />
+                <label for="outputTypeCsv">CSV (.csv)</label>
+              </div>
+            </div>
+            <div class="validation-error" id="outputTypeError">Please select a valid output format</div>
+          </div>
           <!--<div class="form-group">
             <label for="outputName">Output Name</label>
             <input type="text" id="outputName" value=".peakscout" required />
@@ -384,6 +407,7 @@
     const VALID_PEAK_TYPES = ['BED6', 'MACS2', 'SEACR'];
     const VALID_SPECIES = ['dm6', 'xenTro10', 'hg38', 'hg19', 'mm10', 'mm39', 'susScr11', 'ce11', 'sacCer3', 'danRer11'];
     const VALID_K_VALUES = ['1', '2', '3'];
+    const VALID_OUTPUT_TYPES = ['csv', 'xlsx'];
 
     // Validation functions
     function validateFile(file) {
@@ -409,6 +433,10 @@
 
     function validateKValue(value) {
       return VALID_K_VALUES.includes(value);
+    }
+
+    function validateOutputType(value) {
+      return VALID_OUTPUT_TYPES.includes(value);
     }
 
     function showFieldError(fieldId, message) {
@@ -452,11 +480,13 @@
     });
 
     // Add validation event listeners
-    document.getElementById('peakType').addEventListener('change', (e) => {
-      hideFieldError('peakType');
-      if (!validatePeakType(e.target.value)) {
-        showFieldError('peakType', 'Invalid peak type selected');
-      }
+    document.querySelectorAll('input[name="peakType"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        hideFieldError('peakType');
+        if (!validatePeakType(e.target.value)) {
+          showFieldError('peakType', 'Invalid peak type selected');
+        }
+      });
     });
 
     document.getElementById('species').addEventListener('change', (e) => {
@@ -475,11 +505,20 @@
       });
     });
 
+    document.querySelectorAll('input[name="outputType"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        hideFieldError('outputType');
+        if (!validateOutputType(e.target.value)) {
+          showFieldError('outputType', 'Invalid output type selected');
+        }
+      });
+    });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       // Clear all previous errors
-      ['file', 'peakType', 'species', 'kValue'].forEach(hideFieldError);
+      ['file', 'peakType', 'species', 'kValue', 'outputType'].forEach(hideFieldError);
       results.innerHTML = '';
       results.classList.remove('show');
       
@@ -495,8 +534,9 @@
       }
       
       // Validate peak type
-      const peakType = document.getElementById('peakType').value;
-      if (!validatePeakType(peakType)) {
+      const peakTypeElement = document.querySelector('input[name="peakType"]:checked');
+      const peakType = peakTypeElement ? peakTypeElement.value : null;
+      if (!peakType || !validatePeakType(peakType)) {
         showFieldError('peakType', 'Please select a valid peak type');
         hasErrors = true;
       }
@@ -513,6 +553,14 @@
       const kValue = kValueElement ? kValueElement.value : null;
       if (!kValue || !validateKValue(kValue)) {
         showFieldError('kValue', 'Please select a valid number of genes (1-3)');
+        hasErrors = true;
+      }
+      
+      // Validate output type
+      const outputTypeElement = document.querySelector('input[name="outputType"]:checked');
+      const outputType = outputTypeElement ? outputTypeElement.value : null;
+      if (!outputType || !validateOutputType(outputType)) {
+        showFieldError('outputType', 'Please select a valid output format');
         hasErrors = true;
       }
       
@@ -536,11 +584,11 @@
           args: [
             '--peak_file', file.name,
             '--peak_type', peakType,
-            '--species', species,
+            '--species_genome', species,
             '--k', kValue,
             '--output_name', file.name + outputName,
             '--o', 'results/',
-            '--output_type', 'csv'
+            '--output_type', outputType
           ],
           input_files: { [file.name]: content },
           return_files: true,
