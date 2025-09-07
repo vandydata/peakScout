@@ -5,8 +5,8 @@
 On local machine:
 
 ```
-cd peakScout
-docker build -t peakscout-lambda -f aws/Dockerfile .
+cd peakScout/aws
+docker build -t peakscout-lambda -f Dockerfile .
 ```
 ### Test locally
 
@@ -30,9 +30,9 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "args": [
       "--peak_file", "test/test_MACS2.bed",
       "--peak_type", "MACS2", 
-      "--species", "test",
+      "--species_genome", "test",
       "--k", "3",
-      "--ref_dir", "test/test-reference",
+      "--ref_dir", "test/test-reference/test",
       "--output_name", "test_MACS2",
       "--o", "test/results/",
       "--output_type", "csv"
@@ -49,15 +49,14 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "args": [
       "--peak_file", "test/test_MACS2.bed",
       "--peak_type", "MACS2",
-      "--species", "mm10",
+      "--species_genome", "mm10",
       "--k", "3",
-      "--ref_dir", "test/test-reference",
       "--output_name", "test_MACS2",
       "--o", "test/results/",
       "--output_type", "csv"
     ],
     "return_files": true,
-    "debug": true
+    "debug": false
   }'
 
 # Real input data, real ref data
@@ -70,9 +69,8 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "args": [
       "--peak_file", "2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak",
       "--peak_type", "MACS2",
-      "--species", "hg38",
+      "--species_genome", "hg38",
       "--k", "1",
-      "--ref_dir", "test/test-reference",
       "--output_name", "test_MACS2",
       "--o", "test/results/",
       "--output_type", "csv"
@@ -89,7 +87,7 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "args": [
       "--peak_file", "2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak",
       "--peak_type", "MACS2",
-      "--species", "hg38",
+      "--species_genome", "hg38",
       "--k", "1",
       "--output_name", "test_MACS2",
       "--o", "test/results/",
@@ -109,7 +107,7 @@ with open('2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak', 'r') as f:
     content = f.read()
 request = {
     'command': 'peak2gene',
-    'args': ['--peak_file', 'peaks.narrowPeak', '--peak_type', 'MACS2', '--species', 'hg38', '--k', '1', '--output_name', 'test_MACS2', '--o', 'results/', '--output_type', 'csv'],
+    'args': ['--peak_file', 'peaks.narrowPeak', '--peak_type', 'MACS2', '--species_genome', 'hg38', '--k', '1', '--output_name', 'test_MACS2', '--o', 'results/', '--output_type', 'csv'],
     'input_files': {'peaks.narrowPeak': content},
     'return_files': True
 }
@@ -130,7 +128,7 @@ cat test/results/test_MACS2.csv # or whatever you expect
 ```
 
 
-## Push container to ECR repository - local to ECR (preferred)
+## Push container to ECR repository - local to ECR (PREFERRED)
 
 From local machine to ECR, directly. Required a ` AmazonEC2ContainerRegistryPowerUser` permissions policy be attached to the IAM user by admin.
 
@@ -149,7 +147,7 @@ docker push $(aws sts get-caller-identity --query Account --output text).dkr.ecr
 ## EC2 instance (one time setup)
 ```
 
-## Push container to ECR repository - S3 to EC2 to ECR (not preferred, this is a workaround)
+## WORKAROUND - Push container to ECR repository - S3 to EC2 to ECR (not preferred, this is a workaround)
 
 This is for when you cannot push directly from local machine to ECR due to network restrictions or permission issues..
 
@@ -182,7 +180,7 @@ aws sts get-caller-identity
 
 or restart instance.
 
-## Export docker image to file and upload to S3
+## EXTREME WORKAROUND - Export docker image to file and upload to S3
 
 ```sh
 # On your local machine

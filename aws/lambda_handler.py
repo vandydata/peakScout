@@ -34,13 +34,13 @@ def extract_zst(archive: Path, out_path: Path):
         with tarfile.open(fileobj=ofh) as z:
             z.extractall(out_path)
 
-def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
+def download_and_extract_reference(species_genome, bucket_name='cds-peakscout-public'):
     """
     Download and extract reference data for a given species from S3
     
     Parameters
     ----------
-    species:     str
+    species_genome:     str
                  Species identifier (e.g., 'mm10', 'hg38', 'mm39')
     bucket_name: str
                  S3 bucket containing reference files
@@ -66,21 +66,22 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
     }
     
     # Check if species is supported
-    if species not in species_mapping:
-        raise ValueError(f"Unsupported species: {species}. Supported species: {list(species_mapping.keys())}")
+    if species_genome not in species_mapping:
+        raise ValueError(f"Unsupported species: {species_genome}. Supported species: {list(species_mapping.keys())}")
     
-    file_name = species_mapping[species]
-    ref_dir = f'/tmp/{species}'
+    file_name = species_mapping[species_genome]
+    ref_dir = f'/tmp/{species_genome}'
     archive_path = f'/tmp/{file_name}'
     
     # Check if reference already exists and is valid
     if os.path.exists(ref_dir):
-        expected_species_dir = os.path.join(ref_dir, species)
+        expected_species_dir = os.path.join(ref_dir, species_genome)
         if os.path.exists(expected_species_dir):
             gene_dir = os.path.join(expected_species_dir, 'gene')
             if os.path.exists(gene_dir) and os.listdir(gene_dir):
-                print(f"Reference for {species} already exists at {ref_dir}")
-                return ref_dir
+                print(f"Reference for {species_genome} already exists at {ref_dir}")
+                #return ref_dir
+                return expected_species_dir  
     
     # Download reference file from S3
     s3_client = boto3.client('s3')
@@ -97,11 +98,11 @@ def download_and_extract_reference(species, bucket_name='cds-peakscout-public'):
         os.makedirs(ref_dir, exist_ok=True)
         extract_zst(archive_path, ref_dir)
         
-        # peakScout expects: ref_dir/{species}/gene/
+        # peakScout expects: ref_dir/{species_genome}/gene/
         # But archives extract to: ref_dir/reference/{species_full_name}/gene/
         # We need to create a symlink or move the directory structure
         
-        expected_species_dir = os.path.join(ref_dir, species)
+        expected_species_dir = os.path.join(ref_dir, species_genome)
         
         # Find the actual extracted directory
         extracted_ref_dir = None
@@ -213,7 +214,7 @@ def handler(event, context):
     Expected input:
     {
         "command": "decompose|peak2gene|gene2peak",
-        "args": ["--species", "hg38", "--k", "5", ...],
+        "args": ["--species_genome ", "hg38", "--k", "5", ...],
         "input_files": {
             "peaks.bed": "chr1\t1000\t2000\n..."
         },
@@ -263,17 +264,17 @@ def handler(event, context):
                 }
         
         # Extract species from args to download reference data
-        species = None
+        species_genome = None
         for i, arg in enumerate(args):
-            if arg == '--species' and i + 1 < len(args):
-                species = args[i + 1]
+            if arg == '--species_genome' and i + 1 < len(args):
+                species_genome = args[i + 1]
                 break
         
         # Download and extract reference data if species is specified
         ref_dir = None
-        if species and species != 'test':  # Skip download for test species
+        if species_genome and species_genome != 'test':  # Skip download for test species
             try:
-                ref_dir = download_and_extract_reference(species, s3_bucket)
+                ref_dir = download_and_extract_reference(species_genome, s3_bucket)
                 print(f"Reference data ready at: {ref_dir}")
             except Exception as e:
                 return {
@@ -284,7 +285,7 @@ def handler(event, context):
                         'Access-Control-Allow-Methods': 'POST, OPTIONS'
                     },
                     'body': json.dumps({
-                        'error': f'Failed to setup reference data for species {species}: {str(e)}',
+                        'error': f'Failed to setup reference data for species {species_genome}: {str(e)}',
                         'error_type': 'ReferenceDataError'
                     })
                 }
@@ -315,7 +316,7 @@ def handler(event, context):
                     modified_args.append(arg)
                     modified_args.append(ref_dir)
                     skip_next = True  # Skip original ref_dir path
-                elif species == 'test':
+                elif species_genome == 'test':
                     # Keep original ref_dir for test species
                     modified_args.append(arg)
                     # Don't skip next - use the provided test reference path
@@ -329,7 +330,7 @@ def handler(event, context):
                             'Access-Control-Allow-Methods': 'POST, OPTIONS'
                         },
                         'body': json.dumps({
-                            'error': f'No reference data available for species {species}. Reference download may have failed.',
+                            'error': f'No reference data available for species {species_genome}. Reference download may have failed.',
                             'error_type': 'ReferenceDataError'
                         })
                     }
@@ -351,7 +352,7 @@ def handler(event, context):
             modified_args.extend(['--ref_dir', ref_dir])
         
         # Build the peakScout command
-        cmd = ['python3', 'peakScout'] + modified_args + [command]
+        cmd = ['python3', 'src/peakScout'] + modified_args + [command]
         
         # Execute the command
         result = subprocess.run(
@@ -368,7 +369,7 @@ def handler(event, context):
             'stderr': result.stderr,
             'returncode': result.returncode,
             'temp_output_dir': temp_output_dir,
-            'species': species,
+            'species': species_genome,
             'ref_dir_used': ref_dir
         }
         

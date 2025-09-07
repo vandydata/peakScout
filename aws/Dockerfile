@@ -10,7 +10,7 @@ COPY requirements.txt ${LAMBDA_TASK_ROOT}
 RUN pip install -r requirements.txt
 
 # Copy the peakScout source code
-COPY src/ ${LAMBDA_TASK_ROOT}/
+COPY src/ ${LAMBDA_TASK_ROOT}/src
 
 COPY aws/lambda_handler.py ${LAMBDA_TASK_ROOT}/
 
@@ -18,7 +18,7 @@ COPY aws/lambda_handler.py ${LAMBDA_TASK_ROOT}/
 COPY test/ ${LAMBDA_TASK_ROOT}/test/
 
 # Make peakScout executable
-RUN chmod +x ${LAMBDA_TASK_ROOT}/peakScout
+RUN chmod +x ${LAMBDA_TASK_ROOT}/src/peakScout
 
 # Set the handler
 CMD ["lambda_handler.entrypoint"]
