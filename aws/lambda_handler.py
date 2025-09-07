@@ -10,6 +10,7 @@ import zstandard
 import gzip
 import base64
 
+
 def extract_zst(archive: Path, out_path: Path):
     """
     extract .zst file
@@ -126,7 +127,7 @@ def download_and_extract_reference(species_genome, bucket_name='cds-peakscout-pu
             
             # Clean up archive file
             os.remove(archive_path)
-            return ref_dir  # Return the base ref_dir, peakScout will append species/gene
+            return expected_species_dir  # Return the base ref_dir, peakScout will append species/gene
         else:
             raise Exception("Could not find gene reference files in expected structure")
             
@@ -204,7 +205,26 @@ def get_preview(content, preview_lines=5):
     """
     lines = content.split('\n')
     return '\n'.join(lines[:preview_lines])
+
+
+# CORS helper functions - must be defined before handler()
+def _cors_headers():
+    # Check if we're running locally (Docker) vs AWS Lambda
+    import os
     
+    function_name = os.environ.get('AWS_LAMBDA_FUNCTION_NAME', '')
+    
+    # If running in AWS, use name of your deployed function (from web console)
+    if function_name == 'peakscout-containerized':
+        return {}  # Let Function URL handle CORS in AWS
+    else:
+        # Local development (function name is 'test_function' or anything else)
+        return {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+        }
+
     
 def handler(event, context):
     
@@ -234,11 +254,7 @@ def handler(event, context):
         if not command:
             return {
                 'statusCode': 400,
-                'headers': {
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Headers': 'Content-Type',
-                    'Access-Control-Allow-Methods': 'POST, OPTIONS'
-                },
+                'headers': _cors_headers(),  # Use _cors_headers() function
                 'body': json.dumps({'error': 'No command specified'})
             }
         
@@ -252,11 +268,7 @@ def handler(event, context):
             except Exception as e:
                 return {
                     'statusCode': 500,
-                    'headers': {
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Headers': 'Content-Type',
-                        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-                    },
+                    'headers': _cors_headers(),  # Use _cors_headers() function
                     'body': json.dumps({
                         'error': f'Failed to write uploaded file {filename}: {str(e)}',
                         'error_type': 'FileUploadError'
@@ -279,11 +291,7 @@ def handler(event, context):
             except Exception as e:
                 return {
                     'statusCode': 500,
-                    'headers': {
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Headers': 'Content-Type',
-                        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-                    },
+                    'headers': _cors_headers(),  # Use _cors_headers() function
                     'body': json.dumps({
                         'error': f'Failed to setup reference data for species {species_genome}: {str(e)}',
                         'error_type': 'ReferenceDataError'
@@ -324,11 +332,7 @@ def handler(event, context):
                     # For real species without downloaded ref, this is an error
                     return {
                         'statusCode': 500,
-                        'headers': {
-                            'Access-Control-Allow-Origin': '*',
-                            'Access-Control-Allow-Headers': 'Content-Type',
-                            'Access-Control-Allow-Methods': 'POST, OPTIONS'
-                        },
+                        'headers': _cors_headers(),  # Use _cors_headers() function
                         'body': json.dumps({
                             'error': f'No reference data available for species {species_genome}. Reference download may have failed.',
                             'error_type': 'ReferenceDataError'
@@ -451,15 +455,15 @@ def handler(event, context):
                 compressed_data = gzip.compress(response_body.encode('utf-8'))
                 encoded_data = base64.b64encode(compressed_data).decode('utf-8')
                 
+                cors_headers = _cors_headers()
+                cors_headers.update({
+                    'Content-Encoding': 'gzip',
+                    'Content-Type': 'application/json'
+                })
+                
                 return {
                     'statusCode': status_code,
-                    'headers': {
-                        'Content-Encoding': 'gzip',
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Headers': 'Content-Type',
-                        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-                    },
+                    'headers': cors_headers,
                     'body': encoded_data,
                     'isBase64Encoded': True,
                     'uncompressed_size': len(response_body),
@@ -472,44 +476,26 @@ def handler(event, context):
         
         return {
             'statusCode': status_code,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS'
-            },
+            'headers': _cors_headers(),  # Use _cors_headers() function
             'body': response_body
         }
         
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS'
-            },
+            'headers': _cors_headers(),  # Use _cors_headers() function
             'body': json.dumps({
                 'error': str(e),
                 'error_type': type(e).__name__
             })
         }
         
-        
-# ---- ADD THIS TO THE BOTTOM OF lambda_handler.py ----
-import json, base64
 
-def _cors_headers():
-    # keep in sync with what your frontend expects
-    return {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-    }
 
 def _ensure_cors(resp):
-    # Guarantee CORS headers on every response
+    #  CORS headers on every response
     if not isinstance(resp, dict):
-        # If your original handler sometimes returns plain strings, normalize
+        # If  original handler  returns plain strings, normalize
         return {
             "statusCode": 200,
             "headers": _cors_headers(),
@@ -525,17 +511,14 @@ def _ensure_cors(resp):
 
 def entrypoint(event, context):
     """
-    Wrapper for AWS Lambda Function URLs / API Gateway proxy events.
-    - Handles OPTIONS preflight.
-    - Unwraps event.body JSON (and base64 decode if needed).
-    - Then delegates to your existing `handler(payload, context)`.
+    Wrapper for AWS Lambda Function
     """
     # Preflight, some browsers will send this when content-yype is JSOn
     method = (
         event.get("requestContext", {})
              .get("http", {})
              .get("method")
-        or event.get("httpMethod")  # API GW REST
+        or event.get("httpMethod")
     )
     if method == "OPTIONS":
         return {
@@ -544,7 +527,7 @@ def entrypoint(event, context):
             "body": "",
         }
 
-    # 2Unwrap Function URL / API Gateway proxy envelope
+    # Unwrap Function URL
     payload = event
     if "body" in event:
         raw = event.get("body", "")
