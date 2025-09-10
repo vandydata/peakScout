@@ -7,7 +7,7 @@
 
 peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results
 
-> Please cite oi: https://doi.org/10.1101/2025.09.07.671934 if you use peakScout, thank you!
+> If you use peakScout, please cite https://doi.org/10.1101/2025.09.07.671934 - thank you!
 
 ## Overview
 
