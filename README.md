@@ -128,7 +128,7 @@ peakScout peak2gene \
 --ref_dir /path/to/reference/directory \
 --output_name name of output file \
 --o /path/to/save/output \
---output_type csv/xslx
+--output_type csv/xlsx
 ```
 
 Specific example:
@@ -142,7 +142,7 @@ peakScout peak2gene \
 --ref_dir reference/mm39 \
 --output_name peakScout_test_MACS2 \
 --o my_output_dir \
---output_type xslx
+--output_type xlsx
 ```
 
 ### Finding Nearest Peaks
@@ -173,7 +173,7 @@ peakScout gene2peak \
 --ref_dir /path/to/reference/directory \
 --output_name name of output file \
 --o /path/to/save/output \
---output_type csv/xslx
+--output_type csv/xlsx
 ```
 
 Specific example:
