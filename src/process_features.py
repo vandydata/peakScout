@@ -254,10 +254,10 @@ def constrain_features(
     down_bound (int): Maximum allowed distance between peak and downstream feature.
 
     Returns:
-    c_starts (np.ndarray): NumPy array containing constrained start positions of reference features.
-    c_ends (np.ndarray): NumPy array containing constrained end positions of reference features.
-    c_start_features (np.ndarray): NumPy array containing constrained reference features sorted by start position.
-    c_end_features (np.ndarray): NumPy array containing constrained reference features sorted by end position.
+    ds_lower (int): Lower index of constrained start positions of reference features.
+    ds_upper (int): Upper index of constrained start positions of reference features.
+    us_lower (int): Lower index of constrained end positions of reference features.
+    us_upper (int): Upper index of constrained end positions of reference features.
 
     Outputs:
     None
@@ -359,7 +359,7 @@ def gen_return_roi(
     features_to_add (dict): Dictionary that maps integer n with a list of the nth closest feature.
     dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak
                          and the nth closest feature.
-    gene_info_to_add (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature.
+    gene_info_to_add (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature. If feature is not 'gene_name', this is None.
     k (int): Number of closest features to determine.
     species_genome (str): Species of the reference genome.
     view_window (float): Proportion of the peak region in entire genome browser window.
@@ -454,6 +454,7 @@ def gen_init(gene: bool) -> tuple[dict, dict]:
     features_to_add (dict): Dictionary that maps integer n with a list of the nth closest feature.
     dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak
                          and the nth closest feature.
+    gene_info_to_add (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature. If feature is not 'gene_name', this is None.
 
     Outputs:
     None
@@ -484,10 +485,10 @@ def update_to_add(
     add_features (dict): Dictionary that maps integer n with a list of the nth closest feature.
     add_dists (dict): Dictionary that maps integer n with a list of the distance between the peak
                          and the nth closest feature.
-    add_gene_info (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature.
+    add_gene_info (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature. If feature is not 'gene_name', this is None.
     features (np.ndarray): NumPy array containing list of features.
-    gene_ids (np.ndarray): NumPy array containing list of gene ids.
-    gene_types (np.ndarray): NumPy array containing list of gene types.
+    gene_ids (np.ndarray): NumPy array containing list of gene ids. If feature is not 'gene_name', this is None.
+    gene_types (np.ndarray): NumPy array containing list of gene types. If feature is not 'gene_name', this is None.
     dist (int): Distance to add to dictionary.
     add_index (int): Index of peak for updating.
     feature_index (int): Index of feature.
