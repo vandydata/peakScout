@@ -77,13 +77,22 @@ def write_to_excel(output: pd.DataFrame, output_name: str, out_dir: str) -> None
                 adjusted_width
             )
 
-        unique_chr_values = output["chr"].unique()
+        chr_col_idx = None
+        for idx, cell in enumerate(worksheet[1], start=1):
+            if cell.value == "chr":
+                chr_col_idx = idx
+                break
 
-        filters = worksheet.auto_filter
-        filters.ref = "B1:B" + str(len(output) + 1)
-        col = FilterColumn(colId=0)
-        col.filters = Filters(filter=unique_chr_values.tolist())
-        filters.filterColumn.append(col)
+        if chr_col_idx is not None:
+            col_letter = get_column_letter(chr_col_idx)
+
+            unique_chr_values = output["chr"].unique()
+
+            filters = worksheet.auto_filter
+            filters.ref = f"{col_letter}1:{col_letter}{len(output) + 1}"
+            col = FilterColumn(colId=chr_col_idx - 1)
+            col.filters = Filters(filter=unique_chr_values.tolist())
+            filters.filterColumn.append(col)
 
         workbook.save(os.path.join(out_dir, output_name) + ".xlsx")
 
