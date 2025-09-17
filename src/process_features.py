@@ -60,7 +60,7 @@ def get_nearest_features(
     start_features = starts.select(feature).to_numpy().flatten()
     end_features = ends.select(feature).to_numpy().flatten()
 
-    if feature == 'gene_name':
+    if feature == "gene_name":
         start_gene_ids = starts.select("gene_id").to_numpy().flatten()
         start_gene_types = starts.select("gene_type").to_numpy().flatten()
 
@@ -79,7 +79,7 @@ def get_nearest_features(
     overlap_features = []
     overlap_index = 0
 
-    features_to_add, dists_to_add, gene_info_to_add = gen_init(feature == 'gene_name')
+    features_to_add, dists_to_add, gene_info_to_add = gen_init(feature == "gene_name")
 
     for peak in return_roi.iter_rows(named=True):
         peak_start = peak["start"]
@@ -101,14 +101,16 @@ def get_nearest_features(
         c_start_features = start_features[ds_lower:ds_upper]
         c_end_features = end_features[us_lower:us_upper]
 
-        if feature == 'gene_name':
+        if feature == "gene_name":
             c_start_gene_ids = start_gene_ids[ds_lower:ds_upper]
             c_end_gene_ids = end_gene_ids[us_lower:us_upper]
 
             c_start_gene_types = start_gene_types[ds_lower:ds_upper]
             c_end_gene_types = end_gene_types[us_lower:us_upper]
         else:
-            c_start_gene_ids = c_end_gene_ids = c_start_gene_types = c_end_gene_types = None
+            c_start_gene_ids = c_end_gene_ids = c_start_gene_types = (
+                c_end_gene_types
+            ) = None
 
         overlap_features, overlap_index = find_overlaps(
             peak_start, peak_end, c_starts_sub, overlap_features, overlap_index
@@ -214,8 +216,8 @@ def get_nearest_features(
         while i > 0:
             features_to_add[k - i + 1].append("N/A")
             dists_to_add[k - i + 1].append("N/A")
-            gene_info_to_add['id'][k - i + 1].append("N/A")
-            gene_info_to_add['type'][k - i + 1].append("N/A")
+            gene_info_to_add["id"][k - i + 1].append("N/A")
+            gene_info_to_add["type"][k - i + 1].append("N/A")
             i -= 1
 
         index += 1
@@ -315,10 +317,8 @@ def find_overlaps(
     peak_start (int): Start position of peak.
     peak_end (int): End position of peak.
     starts (np.ndarray): NumPy array of start positions of reference features.
-    overlap_features (list): A list of overlapping features from the previous peak. If this
-                             is the first peak, this list is empty.
-    overlap_index (int): The index of the first feature in starts that begins after the previous peak ends.
-                         If this is the first peak, this integer is 0.
+    overlap_features (list): A list of overlapping features from the previous peak. If this is the first peak, this list is empty.
+    overlap_index (int): The index of the first feature in starts that begins after the previous peak ends. If this is the first peak, this integer is 0.
 
     Returns:
     overlap_features (list): A list of overlapping features for the given peak.
@@ -357,8 +357,7 @@ def gen_return_roi(
     return_roi (pl.DataFrame): Skeleton for return Polars DataFrame with all necessary columns.
     feature (str): Feature in question.
     features_to_add (dict): Dictionary that maps integer n with a list of the nth closest feature.
-    dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak
-                         and the nth closest feature.
+    dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak and the nth closest feature.
     gene_info_to_add (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature. If feature is not 'gene_name', this is None.
     k (int): Number of closest features to determine.
     species_genome (str): Species of the reference genome.
@@ -383,18 +382,17 @@ def gen_return_roi(
 
         if gene_info_to_add is not None:
             return_roi = return_roi.with_columns(
-            [
-                pl.Series(
-                    "closest_" + feature + "_" + str(i) + "_gene_id",
-                    gene_info_to_add['id'][i]
-                ),
-                pl.Series(
-                    "closest_" + feature + "_" + str(i) + "_gene_type",
-                    gene_info_to_add['type'][i]
-                ),
-            ]
-        )
-
+                [
+                    pl.Series(
+                        "closest_" + feature + "_" + str(i) + "_gene_id",
+                        gene_info_to_add["id"][i],
+                    ),
+                    pl.Series(
+                        "closest_" + feature + "_" + str(i) + "_gene_type",
+                        gene_info_to_add["type"][i],
+                    ),
+                ]
+            )
 
     if species_genome:
         species_genome_col = get_ucsc_browser_urls(
@@ -452,8 +450,7 @@ def gen_init(gene: bool) -> tuple[dict, dict]:
 
     Returns:
     features_to_add (dict): Dictionary that maps integer n with a list of the nth closest feature.
-    dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak
-                         and the nth closest feature.
+    dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak and the nth closest feature.
     gene_info_to_add (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature. If feature is not 'gene_name', this is None.
 
     Outputs:
@@ -462,7 +459,9 @@ def gen_init(gene: bool) -> tuple[dict, dict]:
 
     features_to_add = defaultdict(list)
     dists_to_add = defaultdict(list)
-    gene_info_to_add = {'id': defaultdict(list), 'type': defaultdict(list)} if gene else None
+    gene_info_to_add = (
+        {"id": defaultdict(list), "type": defaultdict(list)} if gene else None
+    )
 
     return features_to_add, dists_to_add, gene_info_to_add
 
@@ -483,8 +482,7 @@ def update_to_add(
 
     Parameters:
     add_features (dict): Dictionary that maps integer n with a list of the nth closest feature.
-    add_dists (dict): Dictionary that maps integer n with a list of the distance between the peak
-                         and the nth closest feature.
+    add_dists (dict): Dictionary that maps integer n with a list of the distance between the peak and the nth closest feature.
     add_gene_info (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature. If feature is not 'gene_name', this is None.
     features (np.ndarray): NumPy array containing list of features.
     gene_ids (np.ndarray): NumPy array containing list of gene ids. If feature is not 'gene_name', this is None.
@@ -502,8 +500,8 @@ def update_to_add(
     add_features[add_index].append(features[feature_index])
     add_dists[add_index].append(str(dist))
     if add_gene_info is not None:
-        add_gene_info['id'][add_index].append(gene_ids[feature_index])
-        add_gene_info['type'][add_index].append(gene_types[feature_index])
+        add_gene_info["id"][add_index].append(gene_ids[feature_index])
+        add_gene_info["type"][add_index].append(gene_types[feature_index])
 
 
 def decompose_features(features: pl.DataFrame) -> dict:
