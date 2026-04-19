@@ -406,7 +406,7 @@ def gen_return_roi(
 
 
 def get_ucsc_browser_urls(
-    species_genome: str, df: pl.DataFrame, view_window: float = 0.2
+    species_genome: str, df: pl.DataFrame, view_window: float = 0.05
 ) -> list:
     """
     Generates UCSC Genome Browser URLs for each peak in the DataFrame.
@@ -435,7 +435,7 @@ def get_ucsc_browser_urls(
         peak_length = end - start
         window_start = max(1, int(start - peak_length / ((1 - view_window) / 2)))
         window_end = int(end + peak_length / ((1 - view_window) / 2))
-        url = f"{base_url}chr{chr}:{window_start}-{window_end}{highlight}chr{chr}:{start}-{end}"
+        url = f"{base_url}chr{chr}:{window_start}-{window_end}{highlight}chr{chr}:{start}-{end}%23FFED29"
         urls.append(url)
 
     return urls
