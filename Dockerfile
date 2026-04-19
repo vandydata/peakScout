@@ -32,8 +32,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the source code
 COPY src/ .
 
-# Make peakScout executable
-RUN chmod +x peakScout
+# Fix line endings and make peakScout executable
+RUN apt-get update && apt-get install -y dos2unix && \
+    dos2unix peakScout && \
+    chmod +x peakScout && \
+    apt-get remove -y dos2unix && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
 # Add peakScout to PATH
 ENV PATH="/app:${PATH}"
