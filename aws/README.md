@@ -67,7 +67,7 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -d '{
     "command": "peak2gene",
     "args": [
-      "--peak_file", "2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak",
+      "--peak_file", "TEST_4.5MB.macs2_peaks.narrowPeak",
       "--peak_type", "MACS2",
       "--species_genome", "hg38",
       "--k", "1",
@@ -94,7 +94,7 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
       "--output_type", "csv"
     ],
     "input_files": {
-      "uploaded_peaks.narrowPeak": "2025-403-Cha_J__MAFB_WT_R1.macs2_peaks.narrowPeak"
+      "uploaded_peaks.narrowPeak": "TEST_4.5MB.macs2_peaks.narrowPeak"
     },
     "return_files": true
   }'
