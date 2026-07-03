@@ -14,8 +14,9 @@
 
 import pandas as pd
 import polars as pl
-from process_features import get_nearest_features, decompose_features
-from process_input import process_peaks, process_genes
+import os
+from process_features import get_nearest_features, decompose_features, add_cre_annotations
+from process_input import process_peaks, process_genes, load_cre_file, resolve_cre_file
 from write_output import write_to_csv, write_to_excel
 
 
@@ -31,6 +32,7 @@ def gene2peak(
     option: str = "native_peak_boundaries",
     boundary: int = None,
     consensus: bool = False,
+    cre_file: str = None,
 ) -> None:
     """
     Find the nearest peaks for a given list of genes.
@@ -47,6 +49,8 @@ def gene2peak(
     option (str): Option for defining start and end positions of peaks.
     boundary (int): Boundary for artificial peak boundary option. None if other options.
     consensus (bool): Whether to use consensus peaks.
+    cre_file (str): Path to a BED file of CRE regions for overlap annotation. If None, auto-detects
+                    ref_dir/cre/{species}-cre.bed when present. Default None.
 
     Returns:
     None
@@ -62,7 +66,10 @@ def gene2peak(
     decomposed_peaks = decompose_features(peaks)
     decomposed_genes = decompose_features(genes)
 
-    output = find_nearest(decomposed_peaks, decomposed_genes, num_features)
+    resolved_cre = resolve_cre_file(cre_file, ref_dir)
+    cre_df = load_cre_file(resolved_cre) if resolved_cre else None
+
+    output = find_nearest(decomposed_peaks, decomposed_genes, num_features, cre_df)
 
     if output_type == "xlsx":
         write_to_excel(output, output_name, out_dir)
@@ -73,7 +80,7 @@ def gene2peak(
 
 
 def find_nearest(
-    decomposed_peaks: dict, decomposed_genes: dict, num_features: int
+    decomposed_peaks: dict, decomposed_genes: dict, num_features: int, cre_df: pl.DataFrame = None
 ) -> pd.DataFrame:
     """
     Find the nearest peaks for a given list of genes. Place these in a Pandas DataFrame.
@@ -84,6 +91,7 @@ def find_nearest(
     decomposed_genes (dict): Dictionary containing keys with chromosome number
                              mapped to Polars DataFrames with genes on that chromosome.
     num_features (int): Number of nearest features to find.
+    cre_df (pl.DataFrame): Polars DataFrame of CRE regions for overlap annotation. Default None.
 
     Returns:
     output (pd.DataFrame): Pandas DataFrame containing gene data, the nearest k peaks for each gene,
@@ -119,6 +127,9 @@ def find_nearest(
                 ),
             ]
         )
+
+    if cre_df is not None:
+        output = add_cre_annotations(output, cre_df)
 
     output = output.to_pandas()
     output = output.sort_values(by=["chr", "name"])

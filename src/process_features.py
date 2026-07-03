@@ -504,6 +504,87 @@ def update_to_add(
         add_gene_info["type"][add_index].append(gene_types[feature_index])
 
 
+def add_cre_annotations(peaks_df: pl.DataFrame, cre_df: pl.DataFrame) -> pl.DataFrame:
+    """
+    Flag each peak for overlap with cis-regulatory elements (CREs).
+
+    Parameters:
+    peaks_df (pl.DataFrame): Polars DataFrame of peaks.
+    cre_df (pl.DataFrame): Polars DataFrame with columns chr, start, end[, accession][, type].
+
+    Returns:
+    peaks_df (pl.DataFrame): Input DataFrame with cre_overlap[, cre_accession][, cre_type]
+    columns inserted before closest_ columns.
+
+    Outputs:
+    None
+    """
+    has_accession = "accession" in cre_df.columns
+    has_type = "type" in cre_df.columns
+
+    peaks_by_chr = decompose_features(peaks_df)
+
+    cre_renames = {"start": "cre_start", "end": "cre_end"}
+    if has_accession:
+        cre_renames["accession"] = "cre_accession_raw"
+    if has_type:
+        cre_renames["type"] = "cre_type_raw"
+    cre_by_chr = {k: v.rename(cre_renames) for k, v in decompose_features(cre_df).items()}
+
+    cre_cols = ["cre_overlap"]
+    if has_accession:
+        cre_cols.append("cre_accession")
+    if has_type:
+        cre_cols.append("cre_type")
+
+    results = []
+    for chrom, peak_sub in peaks_by_chr.items():
+        if chrom not in cre_by_chr:
+            peak_sub = peak_sub.with_columns(pl.lit(False).alias("cre_overlap"))
+            if has_accession:
+                peak_sub = peak_sub.with_columns(pl.lit("").alias("cre_accession"))
+            if has_type:
+                peak_sub = peak_sub.with_columns(pl.lit("").alias("cre_type"))
+            results.append(peak_sub)
+            continue
+
+        peak_idx = peak_sub.with_row_index("_idx")
+        overlaps = peak_idx.join_where(
+            cre_by_chr[chrom],
+            pl.col("start") <= pl.col("cre_end"),
+            pl.col("end") >= pl.col("cre_start"),
+        )
+
+        agg_exprs = [pl.lit(True).alias("cre_overlap")]
+        if has_accession:
+            agg_exprs.append(pl.col("cre_accession_raw").str.join("; ").alias("cre_accession"))
+        if has_type:
+            agg_exprs.append(pl.col("cre_type_raw").str.join("; ").alias("cre_type"))
+
+        hits = overlaps.group_by("_idx").agg(agg_exprs)
+
+        merged = peak_idx.join(hits, on="_idx", how="left").drop("_idx")
+        fill = [pl.col("cre_overlap").fill_null(False)]
+        if has_accession:
+            fill.append(pl.col("cre_accession").fill_null(""))
+        if has_type:
+            fill.append(pl.col("cre_type").fill_null(""))
+        results.append(merged.with_columns(fill))
+
+    if not results:
+        return peaks_df
+
+    result = pl.concat(results)
+
+    closest_cols = [c for c in result.columns if c.startswith("closest_")]
+    if closest_cols:
+        insert_pos = result.columns.index(closest_cols[0])
+        other_cols = [c for c in result.columns if c not in cre_cols]
+        result = result.select(other_cols[:insert_pos] + cre_cols + other_cols[insert_pos:])
+
+    return result
+
+
 def decompose_features(features: pl.DataFrame) -> dict:
     """
     Decompose features by chromosome.

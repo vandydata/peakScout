@@ -246,6 +246,61 @@ def edit_peaks(peaks: pl.DataFrame, option: str, boundary: int) -> pl.DataFrame:
     return peaks
 
 
+def load_cre_file(cre_file_path: str) -> pl.DataFrame:
+    """
+    Load a BED file of cis-regulatory elements (CREs) into a Polars DataFrame.
+
+    Parameters:
+    cre_file_path (str): Path to BED file of CRE regions (BED3 minimum, BED6 for ENCODE cCREs).
+
+    Returns:
+    cre (pl.DataFrame): Polars DataFrame with columns: chr, start, end[, accession][, type].
+
+    Outputs:
+    None
+    """
+    cre = pl.read_csv(cre_file_path, has_header=False, separator="\t")
+    n_cols = cre.width
+
+    keep = {"column_1": "chr", "column_2": "start", "column_3": "end"}
+    if n_cols >= 4:
+        keep["column_4"] = "accession"
+    if n_cols >= 6:
+        keep["column_6"] = "type"
+
+    cre = cre.rename(keep).select(list(keep.values()))
+
+    cre = cre.with_columns(
+        pl.when(pl.col("chr").cast(pl.Utf8).str.starts_with("chr"))
+        .then(pl.col("chr").cast(pl.Utf8))
+        .otherwise(pl.lit("chr") + pl.col("chr").cast(pl.Utf8))
+        .alias("chr")
+    )
+    cre = cre.with_columns([pl.col("start") + 1, pl.col("end") + 1])
+    return cre
+
+
+def resolve_cre_file(cre_file: str, ref_dir: str) -> str:
+    """
+    Resolve the CRE BED file path.
+
+    Parameters:
+    cre_file (str): Explicit path to a CRE BED file, or None to auto-detect.
+    ref_dir (str): Reference directory used to locate the default CRE file.
+
+    Returns:
+    path (str): Resolved path to the CRE BED file, or None if not found.
+
+    Outputs:
+    None
+    """
+    if cre_file:
+        return cre_file
+    species = os.path.basename(os.path.normpath(ref_dir))
+    default = os.path.join(ref_dir, "cre", f"{species}-cre.bed")
+    return default if os.path.exists(default) else None
+
+
 def process_genes(file_path: str, ref_dir: str) -> pl.DataFrame:
     genes = pl.read_csv(file_path, has_header=False).to_numpy()[:, 0].tolist()
     gene_df = pl.DataFrame()

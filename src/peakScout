@@ -19,6 +19,7 @@ import json
 from peak2gene import peak2gene
 from gene2peak import gene2peak
 from decompose_ref import decompose_gtf
+from get_cre import get_cre
 
 
 def main(args):
@@ -40,6 +41,7 @@ def main(args):
     consensus = args.consensus
     drop_columns = args.drop_columns
     view_window = args.view_window
+    cre_file = args.cre_file
 
     if species_genome is not None:
         check_species(species_genome)
@@ -60,7 +62,8 @@ def main(args):
             db,
             consensus,
             drop_columns,
-            view_window
+            view_window,
+            cre_file,
         )
     elif function == "decompose":
         decompose_gtf(ref, gtf_ref)
@@ -76,8 +79,11 @@ def main(args):
             output_type,
             option,
             boundary,
-            consensus
+            consensus,
+            cre_file,
         )
+    elif function == "get_cre":
+        get_cre(species_genome, ref)
     else:
         raise ValueError("Invalid peakScout call")
 
@@ -125,6 +131,8 @@ if __name__ == "__main__":
     parser.add_argument('--consensus', action='store_true', help='Consensus peak file')
     parser.add_argument('--drop_columns', action='store_true', help='Only keep necessary columns from input file')
     parser.add_argument('--view_window', type=float, default=0.2, help='Proportion of the peak region in entire genome browser window')
+    parser.add_argument('--cre_file', type=str, default=None, help='BED file of CRE regions for overlap annotation (BED3 min; BED4 for names). Auto-detected from ref_dir/cre/cre.bed if present.')
+
 
     args = parser.parse_args()
 

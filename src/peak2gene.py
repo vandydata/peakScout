@@ -15,8 +15,8 @@
 import pandas as pd
 import polars as pl
 import os
-from process_features import get_nearest_features, decompose_features
-from process_input import process_peaks
+from process_features import get_nearest_features, decompose_features, add_cre_annotations
+from process_input import process_peaks, load_cre_file, resolve_cre_file
 from write_output import write_to_csv, write_to_excel
 
 
@@ -36,6 +36,7 @@ def peak2gene(
     consensus: bool = False,
     drop_columns: bool = False,
     view_window: float = 0.2,
+    cre_file: str = None,
 ) -> None:
     """
     Find the nearest genes for a given list of peaks.
@@ -56,6 +57,8 @@ def peak2gene(
     consensus (bool): Whether to use consensus peaks. Default False.
     drop_columns (bool): Whether to drop unnecessary columns from the original file. Default False.
     view_window (float): Proportion of the peak region in entire genome browser window. Default 0.2.
+    cre_file (str): Path to a BED file of CRE regions for overlap annotation. If None, auto-detects
+                    ref_dir/cre/cre.bed when present. Default None.
 
     Returns:
     None
@@ -67,6 +70,10 @@ def peak2gene(
 
     peaks = process_peaks(peak_file, peak_type, option, boundary, consensus)
     decomposed_peaks = decompose_features(peaks)
+
+    resolved_cre = resolve_cre_file(cre_file, ref_dir)
+    cre_df = load_cre_file(resolved_cre) if resolved_cre else None
+
     output = find_nearest(
         decomposed_peaks,
         species_genome,
@@ -76,7 +83,9 @@ def peak2gene(
         down_bound,
         drop_columns,
         view_window,
+        cre_df,
     )
+
     if output_type == "xlsx":
         write_to_excel(output, output_name, out_dir)
     elif output_type == "csv":
@@ -94,6 +103,7 @@ def find_nearest(
     down_bound: int,
     drop_columns: bool,
     view_window: float,
+    cre_df: pl.DataFrame = None,
 ) -> pd.DataFrame:
     """
     Find the nearest genes for a given list of peaks. Place these in a Pandas DataFrame.
@@ -108,6 +118,7 @@ def find_nearest(
     down_bound (int): Maximum allowed distance between peak and downstream feature.
     drop_columns (bool): Whether to drop unnecessary columns from the original file.
     view_window (float): Proportion of the peak region in entire genome browser window.
+    cre_df (pl.DataFrame): Polars DataFrame of CRE regions for overlap annotation. Default None.
 
     Returns:
     output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak,
@@ -144,6 +155,9 @@ def find_nearest(
                 f"Warning: could not find feature information for chromosome {key}. \
                   Results for these peaks are not included in the output."
             )
+
+    if cre_df is not None:
+        output = add_cre_annotations(output, cre_df)
 
     output = output.to_pandas()
     output = output.sort_values(by=["chr", "start"])
