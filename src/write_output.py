@@ -18,16 +18,16 @@ import xlsxwriter
 import polars as pl
 
 HEADER_COLORS = {
-    "peak":  "#D9D9D9",
+    "peak":  "#DA9694",
     "cre":   "#C4D79B",
-    "gene":  "#FCD5B4",
+    "gene":  "#95B3D7",
     "ucsc":  "#B8CCE4",
 }
 
 ROW_COLORS = {
-    "peak":  "#F2F2F2",
+    "peak":  "#F2DCDB",
     "cre":   "#EBF1DE",
-    "gene":  "#FDE9D9",
+    "gene":  "#DCE6F1",
     "ucsc":  "#DCE6F1",
 }
 
