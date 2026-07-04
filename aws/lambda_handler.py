@@ -171,8 +171,7 @@ def download_and_extract_reference(species_genome_genome, bucket_name='cds-peaks
             
             # Clean up archive file
             os.remove(archive_path)
-            return expected_species_dir  # Return the base ref_dir, peakScout will append species/gene
-            return expected_species_dir  # Return the base ref_dir, peakScout will append species/gene
+            return expected_species_dir
         else:
             raise Exception("Could not find gene reference files in expected structure")
             
@@ -428,7 +427,7 @@ def handler(event, context):
             modified_args.append('--use_cre')
 
         # Build the peakScout command
-        cmd = ['python3', 'src/src/peakScout'] + modified_args + [command]
+        cmd = ['python3', 'src/peakScout'] + modified_args + [command]
         
         # Execute the command
         result = subprocess.run(
