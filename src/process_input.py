@@ -299,6 +299,8 @@ def resolve_cre_file(cre_file: str, ref_dir: str) -> str:
         return None
     if cre_file != "auto":
         return cre_file
+    if not ref_dir:
+        return None
     species = os.path.basename(os.path.normpath(ref_dir))
     default = os.path.join(ref_dir, "cre", f"{species}-cre.bed")
     return default if os.path.exists(default) else None

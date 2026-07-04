@@ -78,26 +78,22 @@ def download_cre(species_genome, ref_dir, bucket_name='cds-peakscout-public'):
     return cre_path
 
 
-def download_and_extract_reference(species_genome_genome, bucket_name='cds-peakscout-public'):
+def download_and_extract_reference(species_genome, bucket_name='cds-peakscout-public'):
     """
     Download and extract reference data for a given species from S3
-    
+
     Parameters
     ----------
-    species_genome_genome:     str
-                 Species identifier (e.g., 'mm10', 'hg38', 'mm39')
-    bucket_name: str
-                 S3 bucket containing reference files
-        
+    species_genome: str  Species identifier (e.g., 'mm10', 'hg38', 'mm39')
+    bucket_name:    str  S3 bucket containing reference files
+
     Returns
     -------
-    str:         Path to extracted reference directory
+    str: Path to extracted reference directory
     """
-
-    # Map species to S3 file names
     species_mapping = {
         'mm10': 'mouse_mm10.tar.zst',
-        'mm39': 'mouse_mm39.tar.zst', 
+        'mm39': 'mouse_mm39.tar.zst',
         'hg19': 'human_hg19.tar.zst',
         'hg38': 'human_hg38.tar.zst',
         'dm6': 'fly_BDGP6.54.tar.zst',
@@ -108,73 +104,55 @@ def download_and_extract_reference(species_genome_genome, bucket_name='cds-peaks
         'tair10': 'arabidopsis_TAIR10.tar.zst',
         'xenTro10': 'frog_v10.1.tar.zst'
     }
-    
-    # Check if species is supported
-    if species_genome_genome not in species_mapping:
-        raise ValueError(f"Unsupported species: {species_genome_genome}. Supported species: {list(species_mapping.keys())}")
-    
-    file_name = species_mapping[species_genome_genome]
-    ref_dir = f'/tmp/{species_genome_genome}'
+
+    if species_genome not in species_mapping:
+        raise ValueError(f"Unsupported species: {species_genome}. Supported: {list(species_mapping.keys())}")
+
+    file_name = species_mapping[species_genome]
+    ref_dir = f'/tmp/{species_genome}'
     archive_path = f'/tmp/{file_name}'
-    
-    # Check if reference already exists and is valid
-    if os.path.exists(ref_dir):
-        expected_species_dir = os.path.join(ref_dir, species_genome_genome)
-        if os.path.exists(expected_species_dir):
-            gene_dir = os.path.join(expected_species_dir, 'gene')
-            if os.path.exists(gene_dir) and os.listdir(gene_dir):
-                print(f"Reference for {species_genome_genome} already exists at {ref_dir}")
-                ##return ref_dir
-                return expected_species_dir  
-                return expected_species_dir  
-    
-    # Download reference file from S3
+
+    # Return cached reference if already extracted
+    expected_species_dir = os.path.join(ref_dir, species_genome)
+    if os.path.exists(expected_species_dir):
+        gene_dir = os.path.join(expected_species_dir, 'gene')
+        if os.path.exists(gene_dir) and os.listdir(gene_dir):
+            print(f"Reference for {species_genome} already cached at {expected_species_dir}")
+            return expected_species_dir
+
     s3_client = boto3.client('s3')
     try:
         print(f"Downloading {file_name} from S3...")
         s3_client.download_file(bucket_name, file_name, archive_path)
-        print(f"Downloaded {file_name} to {archive_path}")
     except Exception as e:
         raise Exception(f"Failed to download {file_name} from S3: {str(e)}")
-    
-    # Extract the archive
+
     try:
         print(f"Extracting {archive_path} to {ref_dir}...")
         os.makedirs(ref_dir, exist_ok=True)
         extract_zst(archive_path, ref_dir)
-        
-        # peakScout expects: ref_dir/{species_genome_genome}/gene/
-        # But archives extract to: ref_dir/reference/{species_full_name}/gene/
-        # We need to create a symlink or move the directory structure
-        
-        expected_species_dir = os.path.join(ref_dir, species_genome_genome)
-        
-        # Find the actual extracted directory
+
         extracted_ref_dir = None
         for root, dirs, files in os.walk(ref_dir):
-            # Look for  "gene" directory
             if 'gene' in dirs:
                 gene_dir = os.path.join(root, 'gene')
-                # Verify it has chromosome files
                 try:
                     if any(f.startswith('chr') and f.endswith('.csv') for f in os.listdir(gene_dir)):
                         extracted_ref_dir = root
                         break
                 except:
                     continue
-        
-        if extracted_ref_dir:
-            # Create a symlink from expected path to actual path
-            if not os.path.exists(expected_species_dir):
-                os.symlink(extracted_ref_dir, expected_species_dir)
-                print(f"Created symlink: {expected_species_dir} -> {extracted_ref_dir}")
-            
-            # Clean up archive file
-            os.remove(archive_path)
-            return expected_species_dir
-        else:
+
+        if not extracted_ref_dir:
             raise Exception("Could not find gene reference files in expected structure")
-            
+
+        if not os.path.exists(expected_species_dir):
+            os.symlink(extracted_ref_dir, expected_species_dir)
+            print(f"Created symlink: {expected_species_dir} -> {extracted_ref_dir}")
+
+        os.remove(archive_path)
+        return expected_species_dir
+
     except Exception as e:
         raise Exception(f"Failed to extract {archive_path}: {str(e)}")
 
@@ -312,8 +290,7 @@ def handler(event, context):
         if not command:
             return {
                 'statusCode': 400,
-                'headers': _cors_headers(),  # Use _cors_headers() function
-                'headers': _cors_headers(),  # Use _cors_headers() function
+                'headers': _cors_headers(),
                 'body': json.dumps({'error': 'No command specified'})
             }
         
@@ -327,8 +304,7 @@ def handler(event, context):
             except Exception as e:
                 return {
                     'statusCode': 500,
-                    'headers': _cors_headers(),  # Use _cors_headers() function
-                    'headers': _cors_headers(),  # Use _cors_headers() function
+                    'headers': _cors_headers(),
                     'body': json.dumps({
                         'error': f'Failed to write uploaded file {filename}: {str(e)}',
                         'error_type': 'FileUploadError'
@@ -336,17 +312,17 @@ def handler(event, context):
                 }
         
         # Extract species from args to download reference data
-        species_genome_genome = None
+        species_genome = None
         for i, arg in enumerate(args):
-            if arg == '--species_genome_genome' and i + 1 < len(args):
-                species_genome_genome = args[i + 1]
+            if arg == '--species_genome' and i + 1 < len(args):
+                species_genome = args[i + 1]
                 break
-        
+
         # Download and extract reference data if species is specified
         ref_dir = None
-        if species_genome_genome and species_genome_genome != 'test':  # Skip download for test species
+        if species_genome and species_genome != 'test':  # Skip download for test species
             try:
-                ref_dir = download_and_extract_reference(species_genome_genome, s3_bucket)
+                ref_dir = download_and_extract_reference(species_genome, s3_bucket)
                 print(f"Reference data ready at: {ref_dir}")
                 if use_cre and species_genome in CRE_SPECIES:
                     try:
@@ -356,10 +332,9 @@ def handler(event, context):
             except Exception as e:
                 return {
                     'statusCode': 500,
-                    'headers': _cors_headers(),  # Use _cors_headers() function
-                    'headers': _cors_headers(),  # Use _cors_headers() function
+                    'headers': _cors_headers(),
                     'body': json.dumps({
-                        'error': f'Failed to setup reference data for species {species_genome_genome}: {str(e)}',
+                        'error': f'Failed to setup reference data for species {species_genome}: {str(e)}',
                         'error_type': 'ReferenceDataError'
                     })
                 }
@@ -390,18 +365,15 @@ def handler(event, context):
                     modified_args.append(arg)
                     modified_args.append(ref_dir)
                     skip_next = True  # Skip original ref_dir path
-                elif species_genome_genome == 'test':
+                elif species_genome == 'test':
                     # Keep original ref_dir for test species
                     modified_args.append(arg)
-                    # Don't skip next - use the provided test reference path
                 else:
-                    # For real species without downloaded ref, this is an error
                     return {
                         'statusCode': 500,
-                        'headers': _cors_headers(),  # Use _cors_headers() function
-                        'headers': _cors_headers(),  # Use _cors_headers() function
+                        'headers': _cors_headers(),
                         'body': json.dumps({
-                            'error': f'No reference data available for species {species_genome_genome}. Reference download may have failed.',
+                            'error': f'No reference data available for species {species_genome}. Reference download may have failed.',
                             'error_type': 'ReferenceDataError'
                         })
                     }
@@ -423,7 +395,7 @@ def handler(event, context):
             modified_args.extend(['--ref_dir', ref_dir])
 
         # Inject --use_cre when CRE was requested and CRE file not  provided
-        if use_cre and '--cre_file' not in modified_args and '--use_cre' not in modified_args:
+        if use_cre and ref_dir and '--cre_file' not in modified_args and '--use_cre' not in modified_args:
             modified_args.append('--use_cre')
 
         # Build the peakScout command
@@ -444,7 +416,7 @@ def handler(event, context):
             'stderr': result.stderr,
             'returncode': result.returncode,
             'temp_output_dir': temp_output_dir,
-            'species': species_genome_genome,
+            'species': species_genome,
             'ref_dir_used': ref_dir
         }
         
@@ -541,16 +513,9 @@ def handler(event, context):
                     'Content-Encoding': 'gzip',
                     'Content-Type': 'application/json'
                 })
-                
-                cors_headers = _cors_headers()
-                cors_headers.update({
-                    'Content-Encoding': 'gzip',
-                    'Content-Type': 'application/json'
-                })
-                
+
                 return {
                     'statusCode': status_code,
-                    'headers': cors_headers,
                     'headers': cors_headers,
                     'body': encoded_data,
                     'isBase64Encoded': True,
@@ -564,16 +529,14 @@ def handler(event, context):
         
         return {
             'statusCode': status_code,
-            'headers': _cors_headers(),  # Use _cors_headers() function
-            'headers': _cors_headers(),  # Use _cors_headers() function
+            'headers': _cors_headers(),
             'body': response_body
         }
-        
+
     except Exception as e:
         return {
             'statusCode': 500,
-            'headers': _cors_headers(),  # Use _cors_headers() function
-            'headers': _cors_headers(),  # Use _cors_headers() function
+            'headers': _cors_headers(),
             'body': json.dumps({
                 'error': str(e),
                 'error_type': type(e).__name__
@@ -584,11 +547,7 @@ def handler(event, context):
 
 
 def _ensure_cors(resp):
-    #  CORS headers on every response
-    #  CORS headers on every response
     if not isinstance(resp, dict):
-        # If  original handler  returns plain strings, normalize
-        # If  original handler  returns plain strings, normalize
         return {
             "statusCode": 200,
             "headers": _cors_headers(),
