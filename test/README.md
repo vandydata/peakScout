@@ -19,7 +19,7 @@ See `test_MACS2_expected_results.csv` or as shown below.
 
 For each of the `test_*.bed` files, the finding of nearest genes should be as follows:
 
-| name | closest_gene_name_1   | closest_gene_name_2  | closest_gene_name_3   |
+| name | gene1_synonym   | gene2_synonym  | gene3_synonym   |
 | ------------ | ------- | ------- | ------- |
 | peak1        | Rp1     | Gm37483 | Gm6101  |
 | peak2        | Gm7182  | Gm37567 | Atp6v1h |

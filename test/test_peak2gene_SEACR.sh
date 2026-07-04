@@ -3,7 +3,7 @@
 peakScout peak2gene \
     --peak_file test/test_SEACR.bed \
     --peak_type SEACR \
-    --species_genome mm39 \
+    --species_genome mm10 \
     --k 3 \
     --ref_dir test/test-reference/test \
     --output_name test_peak2gene_SEACR \

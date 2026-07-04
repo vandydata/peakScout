@@ -11,6 +11,7 @@
 # https://github.com/vandydata/peakScout
 #
 # ------------------------------------------------------------------------------
+import re
 import polars as pl
 import numpy as np
 from collections import defaultdict
@@ -385,27 +386,28 @@ def gen_return_roi(
     Outputs:
     None
     """
+    is_gene = feature == "gene_name"
     for i in range(1, k + 1):
-        return_roi = return_roi.with_columns(
-            [
-                pl.Series("closest_" + feature + "_" + str(i), features_to_add[i]),
-                pl.Series(
-                    "closest_" + feature + "_" + str(i) + "_dist", dists_to_add[i]
-                ),
-            ]
-        )
+        if is_gene:
+            return_roi = return_roi.with_columns(
+                [
+                    pl.Series(f"gene{i}_synonym", features_to_add[i]),
+                    pl.Series(f"gene{i}_dist2peak", dists_to_add[i]),
+                ]
+            )
+        else:
+            return_roi = return_roi.with_columns(
+                [
+                    pl.Series(f"peak{i}_name", features_to_add[i]),
+                    pl.Series(f"peak{i}_dist2gene", dists_to_add[i]),
+                ]
+            )
 
         if gene_info_to_add is not None:
             return_roi = return_roi.with_columns(
                 [
-                    pl.Series(
-                        "closest_" + feature + "_" + str(i) + "_gene_id",
-                        gene_info_to_add["id"][i],
-                    ),
-                    pl.Series(
-                        "closest_" + feature + "_" + str(i) + "_gene_type",
-                        gene_info_to_add["type"][i],
-                    ),
+                    pl.Series(f"gene{i}_ensemblid", gene_info_to_add["id"][i]),
+                    pl.Series(f"gene{i}_biotype", gene_info_to_add["type"][i]),
                 ]
             )
 
@@ -420,7 +422,7 @@ def gen_return_roi(
             species_genome, return_roi, view_window, per_row_gene_coords
         )
         return_roi = return_roi.with_columns(
-            pl.Series("ucsc_genome_browser_urls", species_genome_col)
+            pl.Series("ucsc_gb_url", species_genome_col)
         )
 
     return return_roi
@@ -532,7 +534,7 @@ def update_to_add(
     Updates add_features, add_dists, and add_gene_info to contain the newest feature, dist, and additional information.
     """
     add_features[add_index].append(features[feature_index])
-    add_dists[add_index].append(str(dist))
+    add_dists[add_index].append(dist)
     if add_gene_info is not None:
         add_gene_info["id"][add_index].append(gene_ids[feature_index])
         add_gene_info["type"][add_index].append(gene_types[feature_index])
@@ -610,10 +612,10 @@ def add_cre_annotations(peaks_df: pl.DataFrame, cre_df: pl.DataFrame) -> pl.Data
 
     result = pl.concat(results)
 
-    closest_cols = [c for c in result.columns if c.startswith("closest_")]
+    closest_cols = [c for c in result.columns if re.match(r"^gene\d+_", c)]
     if closest_cols:
-        insert_pos = result.columns.index(closest_cols[0])
         other_cols = [c for c in result.columns if c not in cre_cols]
+        insert_pos = other_cols.index(closest_cols[-1]) + 1
         result = result.select(other_cols[:insert_pos] + cre_cols + other_cols[insert_pos:])
 
     return result

@@ -3,7 +3,7 @@
 peakScout peak2gene \
     --peak_file test/test_BED6.bed \
     --peak_type BED6 \
-    --species_genome mm39 \
+    --species_genome mm10 \
     --k 3 \
     --ref_dir test/test-reference/test \
     --output_name test_peak2gene_BED6 \
