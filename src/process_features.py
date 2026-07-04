@@ -55,6 +55,7 @@ def get_nearest_features(
 
     starts_sub = starts.select(["start", "end"]).to_numpy()
     ends_sub = ends.select("end").to_numpy().flatten()
+    ends_start_end = ends.select(["start", "end"]).to_numpy()
     assert len(starts_sub) == len(ends_sub)
 
     start_features = starts.select(feature).to_numpy().flatten()
@@ -80,6 +81,7 @@ def get_nearest_features(
     overlap_index = 0
 
     features_to_add, dists_to_add, gene_info_to_add = gen_init(feature == "gene_name")
+    gene_coords_to_add = defaultdict(list)
 
     for peak in return_roi.iter_rows(named=True):
         peak_start = peak["start"]
@@ -97,6 +99,7 @@ def get_nearest_features(
 
         c_starts_sub = starts_sub[ds_lower:ds_upper]
         c_ends_sub = ends_sub[us_lower:us_upper]
+        c_ends_start_end = ends_start_end[us_lower:us_upper]
 
         c_start_features = start_features[ds_lower:ds_upper]
         c_end_features = end_features[us_lower:us_upper]
@@ -120,6 +123,7 @@ def get_nearest_features(
         overlap_ctr = 0
 
         while overlap_ctr < len(overlap_features) and i > 0:
+            fi = overlap_features[overlap_ctr]
             update_to_add(
                 features_to_add,
                 dists_to_add,
@@ -129,8 +133,9 @@ def get_nearest_features(
                 c_start_gene_types,
                 0,
                 k - i + 1,
-                overlap_features[overlap_ctr],
+                fi,
             )
+            gene_coords_to_add[k - i + 1].append((int(c_starts_sub[fi][0]), int(c_starts_sub[fi][1])))
             overlap_ctr += 1
             i -= 1
 
@@ -161,6 +166,7 @@ def get_nearest_features(
                     k - i + 1,
                     ds_index,
                 )
+                gene_coords_to_add[k - i + 1].append((int(c_starts_sub[ds_index][0]), int(c_starts_sub[ds_index][1])))
                 ds_index += 1
             else:
                 update_to_add(
@@ -174,6 +180,7 @@ def get_nearest_features(
                     k - i + 1,
                     us_index,
                 )
+                gene_coords_to_add[k - i + 1].append((int(c_ends_start_end[us_index][0]), int(c_ends_start_end[us_index][1])))
                 us_index -= 1
 
             i -= 1
@@ -193,6 +200,7 @@ def get_nearest_features(
                     k - i + 1,
                     ds_index,
                 )
+                gene_coords_to_add[k - i + 1].append((int(c_starts_sub[ds_index][0]), int(c_starts_sub[ds_index][1])))
                 ds_index += 1
                 i -= 1
         elif i > 0 and ds_index >= len(c_start_features):
@@ -210,6 +218,7 @@ def get_nearest_features(
                     k - i + 1,
                     us_index,
                 )
+                gene_coords_to_add[k - i + 1].append((int(c_ends_start_end[us_index][0]), int(c_ends_start_end[us_index][1])))
                 us_index -= 1
                 i -= 1
 
@@ -218,6 +227,7 @@ def get_nearest_features(
             dists_to_add[k - i + 1].append("N/A")
             gene_info_to_add["id"][k - i + 1].append("N/A")
             gene_info_to_add["type"][k - i + 1].append("N/A")
+            gene_coords_to_add[k - i + 1].append(None)
             i -= 1
 
         index += 1
@@ -228,6 +238,7 @@ def get_nearest_features(
         features_to_add,
         dists_to_add,
         gene_info_to_add,
+        gene_coords_to_add,
         k,
         species_genome,
         view_window,
@@ -345,6 +356,7 @@ def gen_return_roi(
     features_to_add: dict,
     dists_to_add: dict,
     gene_info_to_add: dict,
+    gene_coords_to_add: dict,
     k: int,
     species_genome: str,
     view_window: float = 0.2,
@@ -395,8 +407,14 @@ def gen_return_roi(
             )
 
     if species_genome:
+        n_rows = len(return_roi)
+        per_row_gene_coords = [
+            [gene_coords_to_add[ki][ri] for ki in range(1, k + 1)
+             if ri < len(gene_coords_to_add[ki]) and gene_coords_to_add[ki][ri] is not None]
+            for ri in range(n_rows)
+        ]
         species_genome_col = get_ucsc_browser_urls(
-            species_genome, return_roi, view_window
+            species_genome, return_roi, view_window, per_row_gene_coords
         )
         return_roi = return_roi.with_columns(
             pl.Series("ucsc_genome_browser_urls", species_genome_col)
@@ -406,7 +424,8 @@ def gen_return_roi(
 
 
 def get_ucsc_browser_urls(
-    species_genome: str, df: pl.DataFrame, view_window: float = 0.05
+    species_genome: str, df: pl.DataFrame, view_window: float = 0.05,
+    per_row_gene_coords: list = None,
 ) -> list:
     """
     Generates UCSC Genome Browser URLs for each peak in the DataFrame.
@@ -415,27 +434,39 @@ def get_ucsc_browser_urls(
     species_genome (str): Species of the reference genome.
     df (pl.DataFrame): Polars DataFrame containing peak information.
     view_window (float): Proportion of the peak region in entire genome browser window.
+    per_row_gene_coords (list): Per-row list of (gene_start, gene_end) tuples for nearest genes.
 
     Returns:
     urls (list): List of UCSC Genome Browser URLs for each peak.
-
-    Outputs:
-    None
     """
     base_url = (
         "https://genome.ucsc.edu/cgi-bin/hgTracks?db=" + species_genome + "&position="
     )
-    highlight = "&highlight="
     urls = []
 
-    for row in df.iter_rows(named=True):
+    for i, row in enumerate(df.iter_rows(named=True)):
         chr = row["chr"]
         start = row["start"]
         end = row["end"]
-        peak_length = end - start
-        window_start = max(1, int(start - peak_length / ((1 - view_window) / 2)))
-        window_end = int(end + peak_length / ((1 - view_window) / 2))
-        url = f"{base_url}chr{chr}:{window_start}-{window_end}{highlight}chr{chr}:{start}-{end}%23FFED29"
+
+        gene_coords = per_row_gene_coords[i] if per_row_gene_coords else []
+
+        # Expand view to encompass peak + all gene bodies
+        all_starts = [start] + [gs for gs, ge in gene_coords]
+        all_ends = [end] + [ge for gs, ge in gene_coords]
+        region_start = min(all_starts)
+        region_end = max(all_ends)
+        span = max(region_end - region_start, end - start)
+        padding = int(span * view_window / (1 - view_window))
+        window_start = max(1, region_start - padding)
+        window_end = region_end + padding
+
+        # Peak highlight (yellow) + gene highlights (light blue)
+        highlights = [f"chr{chr}:{start}-{end}%23FFED29"]
+        for gs, ge in gene_coords:
+            highlights.append(f"chr{chr}:{gs}-{ge}%23ADD8E6")
+
+        url = f"{base_url}chr{chr}:{window_start}-{window_end}&highlight={'|'.join(highlights)}"
         urls.append(url)
 
     return urls

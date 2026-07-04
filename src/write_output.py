@@ -14,7 +14,7 @@
 
 import pandas as pd
 import os
-from openpyxl.styles import PatternFill
+from openpyxl.styles import PatternFill, Font
 from openpyxl.worksheet.filters import FilterColumn, Filters
 from openpyxl.utils import get_column_letter
 
@@ -93,6 +93,27 @@ def write_to_excel(output: pd.DataFrame, output_name: str, out_dir: str) -> None
             col = FilterColumn(colId=chr_col_idx - 1)
             col.filters = Filters(filter=unique_chr_values.tolist())
             filters.filterColumn.append(col)
+
+        url_col_idx = None
+        for idx, cell in enumerate(worksheet[1], start=1):
+            if cell.value == "ucsc_genome_browser_urls":
+                url_col_idx = idx
+                break
+
+        if url_col_idx is not None:
+            url_col_letter = get_column_letter(url_col_idx)
+            hyperlink_font = Font(color="0563C1", underline="single")
+            for row_num in range(2, len(output) + 2):
+                cell = worksheet[f"{url_col_letter}{row_num}"]
+                if cell.value and str(cell.value).startswith("http"):
+                    data_row = output.iloc[row_num - 2]
+                    chr_val = data_row.get("chr", "")
+                    start_val = data_row.get("start", "")
+                    end_val = data_row.get("end", "")
+                    display = f"Visualize {chr_val}:{start_val}-{end_val} in genome browser"
+                    cell.hyperlink = str(cell.value)
+                    cell.value = display
+                    cell.font = hyperlink_font
 
         workbook.save(os.path.join(out_dir, output_name) + ".xlsx")
 
