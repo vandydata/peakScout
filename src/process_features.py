@@ -450,7 +450,8 @@ def get_ucsc_browser_urls(
     urls = []
 
     for i, row in enumerate(df.iter_rows(named=True)):
-        chr = row["chr"]
+        chr = str(row["chr"])
+        chr = chr if chr.startswith("chr") else f"chr{chr}"
         start = row["start"]
         end = row["end"]
 
@@ -467,11 +468,11 @@ def get_ucsc_browser_urls(
         window_end = region_end + padding
 
         # Peak highlight (red) + gene highlights (light blue)
-        highlights = [f"chr{chr}:{start}-{end}%23FF0000"]
+        highlights = [f"{chr}:{start}-{end}%23FF0000"]
         for gs, ge in gene_coords:
-            highlights.append(f"chr{chr}:{gs}-{ge}%23ADD8E6")
+            highlights.append(f"{chr}:{gs}-{ge}%23ADD8E6")
 
-        url = f"{base_url}chr{chr}:{window_start}-{window_end}&highlight={'|'.join(highlights)}"
+        url = f"{base_url}{chr}:{window_start}-{window_end}&highlight={'|'.join(highlights)}"
         urls.append(url)
 
     return urls
