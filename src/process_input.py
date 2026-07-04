@@ -263,7 +263,9 @@ def load_cre_file(cre_file_path: str) -> pl.DataFrame:
     n_cols = cre.width
 
     keep = {"column_1": "chr", "column_2": "start", "column_3": "end"}
-    if n_cols >= 4:
+    if n_cols >= 5:
+        keep["column_5"] = "accession"
+    elif n_cols == 4:
         keep["column_4"] = "accession"
     if n_cols >= 6:
         keep["column_6"] = "type"
