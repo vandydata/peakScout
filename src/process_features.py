@@ -55,7 +55,10 @@ def get_nearest_features(
 
     starts_sub = starts.select(["start", "end"]).to_numpy()
     ends_sub = ends.select("end").to_numpy().flatten()
-    ends_start_end = ends.select(["start", "end"]).to_numpy()
+    if "start" in ends.columns:
+        ends_start_end = ends.select(["start", "end"]).to_numpy()
+    else:
+        ends_start_end = None
     assert len(starts_sub) == len(ends_sub)
 
     start_features = starts.select(feature).to_numpy().flatten()
@@ -99,7 +102,7 @@ def get_nearest_features(
 
         c_starts_sub = starts_sub[ds_lower:ds_upper]
         c_ends_sub = ends_sub[us_lower:us_upper]
-        c_ends_start_end = ends_start_end[us_lower:us_upper]
+        c_ends_start_end = ends_start_end[us_lower:us_upper] if ends_start_end is not None else None
 
         c_start_features = start_features[ds_lower:ds_upper]
         c_end_features = end_features[us_lower:us_upper]
@@ -180,7 +183,7 @@ def get_nearest_features(
                     k - i + 1,
                     us_index,
                 )
-                gene_coords_to_add[k - i + 1].append((int(c_ends_start_end[us_index][0]), int(c_ends_start_end[us_index][1])))
+                gene_coords_to_add[k - i + 1].append((int(c_ends_start_end[us_index][0]), int(c_ends_start_end[us_index][1])) if c_ends_start_end is not None else None)
                 us_index -= 1
 
             i -= 1
@@ -218,7 +221,7 @@ def get_nearest_features(
                     k - i + 1,
                     us_index,
                 )
-                gene_coords_to_add[k - i + 1].append((int(c_ends_start_end[us_index][0]), int(c_ends_start_end[us_index][1])))
+                gene_coords_to_add[k - i + 1].append((int(c_ends_start_end[us_index][0]), int(c_ends_start_end[us_index][1])) if c_ends_start_end is not None else None)
                 us_index -= 1
                 i -= 1
 
