@@ -14,9 +14,25 @@
 
 import pandas as pd
 import os
-from openpyxl.styles import PatternFill, Font
+from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.worksheet.filters import FilterColumn, Filters
 from openpyxl.utils import get_column_letter
+
+HEADER_COLORS = {
+    "peak":  "C6DCFF",  # soft blue  — original peak data
+    "cre":   "C6ECC6",  # soft green — CRE annotations
+    "gene":  "FFE0B2",  # soft amber — nearest gene columns
+    "ucsc":  "E8D5FF",  # soft lilac — UCSC link
+}
+
+def _header_color(col_name: str) -> str:
+    if col_name.startswith("cre_"):
+        return HEADER_COLORS["cre"]
+    if col_name.startswith("closest_"):
+        return HEADER_COLORS["gene"]
+    if col_name == "ucsc_genome_browser_urls":
+        return HEADER_COLORS["ucsc"]
+    return HEADER_COLORS["peak"]
 
 
 def write_to_excel(output: pd.DataFrame, output_name: str, out_dir: str) -> None:
@@ -48,6 +64,13 @@ def write_to_excel(output: pd.DataFrame, output_name: str, out_dir: str) -> None
 
         workbook = writer.book
         worksheet = writer.sheets["Sheet1"]
+
+        for idx, cell in enumerate(worksheet[1], start=1):
+            col_name = output.columns[idx - 1]
+            color = _header_color(col_name)
+            cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center")
 
         for row_num in range(2, len(output) + 2):
             if row_num % 2 == 0:
