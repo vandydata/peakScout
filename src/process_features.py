@@ -461,8 +461,8 @@ def get_ucsc_browser_urls(
         window_start = max(1, region_start - padding)
         window_end = region_end + padding
 
-        # Peak highlight (yellow) + gene highlights (light blue)
-        highlights = [f"chr{chr}:{start}-{end}%23FFED29"]
+        # Peak highlight (red) + gene highlights (light blue)
+        highlights = [f"chr{chr}:{start}-{end}%23FF0000"]
         for gs, ge in gene_coords:
             highlights.append(f"chr{chr}:{gs}-{ge}%23ADD8E6")
 
