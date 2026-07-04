@@ -12,17 +12,15 @@
 #
 # ------------------------------------------------------------------------------
 
-import pandas as pd
 import os
-from openpyxl.styles import PatternFill, Font, Alignment
-from openpyxl.worksheet.filters import FilterColumn, Filters
-from openpyxl.utils import get_column_letter
+import xlsxwriter
+import polars as pl
 
 HEADER_COLORS = {
-    "peak":  "C6DCFF",  # soft blue  — original peak data
-    "cre":   "C6ECC6",  # soft green — CRE annotations
-    "gene":  "FFE0B2",  # soft amber — nearest gene columns
-    "ucsc":  "E8D5FF",  # soft lilac — UCSC link
+    "peak":  "#C6DCFF",
+    "cre":   "#C6ECC6",
+    "gene":  "#FFE0B2",
+    "ucsc":  "#E8D5FF",
 }
 
 def _header_color(col_name: str) -> str:
@@ -35,131 +33,70 @@ def _header_color(col_name: str) -> str:
     return HEADER_COLORS["peak"]
 
 
-def write_to_excel(output: pd.DataFrame, output_name: str, out_dir: str) -> None:
-    """
-    Write output Pandas DataFrame to an Excel sheet
-
-    Parameters:
-    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak,
-                           and the distance between those genes and the peak.
-    output_name (str): Name for output file.
-    out_dir (str): Directory to output file.
-
-    Returns:
-    None
-
-    Outputs:
-    Excel sheet containing peak data, the nearest k genes for each peak, and the distance
-    between those genes and the peak.
-    """
-
+def write_to_excel(output: pl.DataFrame, output_name: str, out_dir: str) -> None:
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
-    with pd.ExcelWriter(
-        os.path.join(out_dir, output_name) + ".xlsx", engine="openpyxl"
-    ) as writer:
+    filepath = os.path.join(out_dir, output_name) + ".xlsx"
+    workbook = xlsxwriter.Workbook(filepath)
+    worksheet = workbook.add_worksheet("Sheet1")
 
-        output.to_excel(writer, sheet_name="Sheet1", index=False)
+    columns = output.columns
 
-        workbook = writer.book
-        worksheet = writer.sheets["Sheet1"]
+    # Build per-column header formats
+    header_formats = []
+    for col in columns:
+        fmt = workbook.add_format({
+            'bg_color': _header_color(col),
+            'bold': True,
+            'align': 'center',
+            'border': 0,
+        })
+        header_formats.append(fmt)
 
-        for idx, cell in enumerate(worksheet[1], start=1):
-            col_name = output.columns[idx - 1]
-            color = _header_color(col_name)
-            cell.fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
-            cell.font = Font(bold=True)
-            cell.alignment = Alignment(horizontal="center")
+    url_format = workbook.add_format({'color': '#0563C1', 'underline': True})
 
-        for row_num in range(2, len(output) + 2):
-            if row_num % 2 == 0:
-                for col_num in range(1, output.shape[1] + 1):
-                    cell = worksheet.cell(row=row_num, column=col_num)
-                    cell.fill = PatternFill(
-                        start_color="E6E6E6", end_color="E6E6E6", fill_type="solid"
-                    )
+    # Compute column widths from data (vectorized via polars)
+    col_widths = []
+    for col in columns:
+        max_data = output[col].cast(pl.Utf8).str.len_chars().max() or 0
+        col_widths.append(max(len(col), int(max_data)) + 2)
+
+    # Write headers
+    for col_idx, (col, fmt, width) in enumerate(zip(columns, header_formats, col_widths)):
+        worksheet.write(0, col_idx, col, fmt)
+        worksheet.set_column(col_idx, col_idx, width)
+
+    # Auto-filter on chr column if present
+    if "chr" in columns:
+        last_col_letter = xlsxwriter.utility.xl_col_to_name(len(columns) - 1)
+        worksheet.autofilter(f"A1:{last_col_letter}1")
+
+    # Determine url column index if present
+    url_col_idx = columns.index("ucsc_genome_browser_urls") if "ucsc_genome_browser_urls" in columns else None
+
+    # Get chr/start/end indices for URL display text
+    chr_col_idx   = columns.index("chr")   if "chr"   in columns else None
+    start_col_idx = columns.index("start") if "start" in columns else None
+    end_col_idx   = columns.index("end")   if "end"   in columns else None
+
+    # Write data rows
+    for row_idx, row in enumerate(output.iter_rows(), start=1):
+        for col_idx, value in enumerate(row):
+            if col_idx == url_col_idx and value and str(value).startswith("http"):
+                if chr_col_idx is not None and start_col_idx is not None and end_col_idx is not None:
+                    display = f"Visualize {row[chr_col_idx]}:{row[start_col_idx]}-{row[end_col_idx]} in genome browser"
+                else:
+                    display = str(value)
+                worksheet.write_url(row_idx, col_idx, str(value), url_format, display)
             else:
-                for col_num in range(1, output.shape[1] + 1):
-                    cell = worksheet.cell(row=row_num, column=col_num)
-                    cell.fill = PatternFill(
-                        start_color="FFFFFF", end_color="FFFFFF", fill_type="solid"
-                    )
+                worksheet.write(row_idx, col_idx, value)
 
-        for column in worksheet.columns:
-            max_length = 0
-            column = [cell for cell in column]
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = max_length + 2
-            worksheet.column_dimensions[get_column_letter(column[0].column)].width = (
-                adjusted_width
-            )
-
-        chr_col_idx = None
-        for idx, cell in enumerate(worksheet[1], start=1):
-            if cell.value == "chr":
-                chr_col_idx = idx
-                break
-
-        if chr_col_idx is not None:
-            col_letter = get_column_letter(chr_col_idx)
-
-            unique_chr_values = output["chr"].unique()
-
-            filters = worksheet.auto_filter
-            filters.ref = f"{col_letter}1:{col_letter}{len(output) + 1}"
-            col = FilterColumn(colId=chr_col_idx - 1)
-            col.filters = Filters(filter=unique_chr_values.tolist())
-            filters.filterColumn.append(col)
-
-        url_col_idx = None
-        for idx, cell in enumerate(worksheet[1], start=1):
-            if cell.value == "ucsc_genome_browser_urls":
-                url_col_idx = idx
-                break
-
-        if url_col_idx is not None:
-            url_col_letter = get_column_letter(url_col_idx)
-            hyperlink_font = Font(color="0563C1", underline="single")
-            for row_num in range(2, len(output) + 2):
-                cell = worksheet[f"{url_col_letter}{row_num}"]
-                if cell.value and str(cell.value).startswith("http"):
-                    data_row = output.iloc[row_num - 2]
-                    chr_val = data_row.get("chr", "")
-                    start_val = data_row.get("start", "")
-                    end_val = data_row.get("end", "")
-                    display = f"Visualize {chr_val}:{start_val}-{end_val} in genome browser"
-                    cell.hyperlink = str(cell.value)
-                    cell.value = display
-                    cell.font = hyperlink_font
-
-        workbook.save(os.path.join(out_dir, output_name) + ".xlsx")
+    workbook.close()
 
 
-def write_to_csv(output: pd.DataFrame, output_name: str, out_dir: str) -> None:
-    """
-    Write output Pandas DataFrame to an CSV file
-
-    Parameters:
-    output (pd.DataFrame): Pandas DataFrame containing peak data, the nearest k genes for each peak,
-                           and the distance between those genes and the peak.
-    output_name (str): Name for output file.
-    out_dir (str): Directory to output file.
-
-    Returns:
-    None
-
-    Outputs:
-    CSV file containing peak data, the nearest k genes for each peak, and the distance
-    between those genes and the peak.
-    """
-
+def write_to_csv(output: pl.DataFrame, output_name: str, out_dir: str) -> None:
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
 
-    output.to_csv(os.path.join(out_dir, output_name) + ".csv", index=False)
+    output.write_csv(os.path.join(out_dir, output_name) + ".csv")

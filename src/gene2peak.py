@@ -12,7 +12,6 @@
 #
 # ------------------------------------------------------------------------------
 
-import pandas as pd
 import polars as pl
 import os
 from process_features import get_nearest_features, decompose_features, add_cre_annotations
@@ -81,7 +80,7 @@ def gene2peak(
 
 def find_nearest(
     decomposed_peaks: dict, decomposed_genes: dict, num_features: int, cre_df: pl.DataFrame = None
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """
     Find the nearest peaks for a given list of genes. Place these in a Pandas DataFrame.
 
@@ -131,7 +130,6 @@ def find_nearest(
     if cre_df is not None:
         output = add_cre_annotations(output, cre_df)
 
-    output = output.to_pandas()
-    output = output.sort_values(by=["chr", "name"])
+    output = output.sort(by=["chr", "name"])
 
     return output
