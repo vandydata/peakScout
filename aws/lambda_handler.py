@@ -38,6 +38,7 @@ def extract_zst(archive: Path, out_path: Path):
             z.extractall(out_path)
 
 CRE_SPECIES = {'hg38', 'mm10'}
+UPLOAD_BUCKET = 'cds-peakscout-userdata'
 
 
 def download_cre(species_genome, ref_dir, bucket_name='cds-peakscout-public'):
@@ -229,12 +230,12 @@ def get_preview(content, preview_lines=5):
     return '\n'.join(lines[:preview_lines])
 
 
-def upload_result_to_s3(file_path: Path, run_id: str, s3_client, bucket: str, ttl: int) -> tuple:
+def upload_result_to_s3(file_path: Path, run_id: str, s3_client, ttl: int = 3600) -> tuple:
     key = f"results/{run_id}/{file_path.name}"
-    s3_client.upload_file(str(file_path), bucket, key)
+    s3_client.upload_file(str(file_path), UPLOAD_BUCKET, key)
     url = s3_client.generate_presigned_url(
         'get_object',
-        Params={'Bucket': bucket, 'Key': key},
+        Params={'Bucket': UPLOAD_BUCKET, 'Key': key},
         ExpiresIn=ttl,
     )
     return url, key
@@ -276,16 +277,32 @@ def handler(event, context):
     }
     """
     try:
+        # Presigned upload URL request — fast path, no peakScout involved
+        if event.get('action') == 'get_upload_url':
+            filename = event.get('filename', 'upload.bed')
+            run_id = str(uuid.uuid4())
+            key = f"uploads/{run_id}/{filename}"
+            s3_client = boto3.client('s3')
+            url = s3_client.generate_presigned_url(
+                'put_object',
+                Params={'Bucket': UPLOAD_BUCKET, 'Key': key},
+                ExpiresIn=900,  # 15 min to complete upload
+            )
+            return {
+                'statusCode': 200,
+                'headers': _cors_headers(),
+                'body': json.dumps({'upload_url': url, 's3_input_key': key}),
+            }
+
         command = event.get('command')
         args = event.get('args', [])
         input_files = event.get('input_files', {})
+        s3_input_key = event.get('s3_input_key')       # S3 key for presigned-uploaded input
         return_files = event.get('return_files', True)
-        max_file_size = event.get('max_file_size', 5242880)  # 5MB inline threshold
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
         compress_response = event.get('compress_response', True)
-        s3_output = event.get('s3_output', False)       # force all outputs to S3 presigned URL
-        s3_output_ttl = event.get('s3_output_ttl', 3600)  # presigned URL TTL in seconds
-        use_cre = event.get('use_cre', False)           # download and apply CRE annotation
+        s3_output_ttl = event.get('s3_output_ttl', 3600)
+        use_cre = event.get('use_cre', False)
         
         if not command:
             return {
@@ -294,22 +311,42 @@ def handler(event, context):
                 'body': json.dumps({'error': 'No command specified'})
             }
         
-        # Write uploaded files to /tmp
-        for filename, content in input_files.items():
+        # Stage input file(s) to /tmp
+        s3_client = boto3.client('s3')
+        if s3_input_key:
+            # File was pre-uploaded to S3 via presigned PUT
+            filename = os.path.basename(s3_input_key)
             file_path = f'/tmp/{filename}'
             try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                print(f"Wrote uploaded file: {filename} -> {file_path}")
+                s3_client.download_file(UPLOAD_BUCKET, s3_input_key, file_path)
+                print(f"Downloaded S3 input: {s3_input_key} -> {file_path}")
+                input_files = {filename: None}  # sentinel so path-rewriting below still works
             except Exception as e:
                 return {
                     'statusCode': 500,
                     'headers': _cors_headers(),
                     'body': json.dumps({
-                        'error': f'Failed to write uploaded file {filename}: {str(e)}',
-                        'error_type': 'FileUploadError'
+                        'error': f'Failed to download input from S3: {str(e)}',
+                        'error_type': 'S3InputError'
                     })
                 }
+        else:
+            # Legacy inline path: file content sent in request body
+            for filename, content in input_files.items():
+                file_path = f'/tmp/{filename}'
+                try:
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                    print(f"Wrote inline file: {filename} -> {file_path}")
+                except Exception as e:
+                    return {
+                        'statusCode': 500,
+                        'headers': _cors_headers(),
+                        'body': json.dumps({
+                            'error': f'Failed to write uploaded file {filename}: {str(e)}',
+                            'error_type': 'FileUploadError'
+                        })
+                    }
         
         # Extract species from args to download reference data
         species_genome = None
@@ -431,7 +468,6 @@ def handler(event, context):
         if result.returncode == 0 and return_files:
             output_files = {}
             run_id = str(uuid.uuid4())
-            s3_client = boto3.client('s3')
 
             output_path = Path(temp_output_dir)
             if output_path.exists():
@@ -440,47 +476,24 @@ def handler(event, context):
                         try:
                             file_size = file_path.stat().st_size
                             relative_path = str(file_path.relative_to(output_path))
-                            use_s3 = s3_output or file_size > max_file_size
 
-                            if use_s3:
-                                try:
-                                    url, s3_key = upload_result_to_s3(
-                                        file_path, run_id, s3_client, s3_bucket, s3_output_ttl
-                                    )
-                                    output_files[relative_path] = {
-                                        'type': 's3_presigned',
-                                        'download_url': url,
-                                        'url_expires_in': s3_output_ttl,
-                                        's3_key': s3_key,
-                                        'size': file_size,
-                                    }
-                                except Exception as e:
-                                    output_files[relative_path] = {
-                                        'type': 'processing_error',
-                                        'error': f'S3 upload failed: {str(e)}',
-                                        'size': file_size,
-                                    }
-                            else:
-                                try:
-                                    with open(file_path, 'r', encoding='utf-8') as f:
-                                        content = f.read()
-                                    output_files[relative_path] = {
-                                        'content_preview': get_preview(content),
-                                        'content': compress_content(content),
-                                        'content_compressed': True,
-                                        'compression_type': 'zstd',
-                                        'size': file_size,
-                                        'type': 'text',
-                                    }
-                                except UnicodeDecodeError:
-                                    with open(file_path, 'rb') as f:
-                                        binary_content = f.read()
-                                    output_files[relative_path] = {
-                                        'content': base64.b64encode(binary_content).decode('utf-8'),
-                                        'content_compressed': False,
-                                        'size': file_size,
-                                        'type': 'binary_base64',
-                                    }
+                            try:
+                                url, s3_key = upload_result_to_s3(
+                                    file_path, run_id, s3_client, s3_output_ttl
+                                )
+                                output_files[relative_path] = {
+                                    'type': 's3_presigned',
+                                    'download_url': url,
+                                    'url_expires_in': s3_output_ttl,
+                                    's3_key': s3_key,
+                                    'size': file_size,
+                                }
+                            except Exception as e:
+                                output_files[relative_path] = {
+                                    'type': 'processing_error',
+                                    'error': f'S3 upload failed: {str(e)}',
+                                    'size': file_size,
+                                }
                         except Exception as e:
                             output_files[relative_path] = {
                                 'type': 'processing_error',

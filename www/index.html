@@ -42,12 +42,12 @@
       <form id="peakscoutForm">
         <div class="form-group">
           <label for="peakFile">Peak File</label>
-          <div class="form-hint">Select MACS2, SEACR or BED file (max 4.5 MB - for larger files, please use the CLI version of peakScout)</div>
+          <div class="form-hint">Select MACS2, SEACR or BED file (max 50 MB)</div>
           <div class="file-upload">
             <input type="file" id="peakFile" accept=".bed,.narrowPeak,.txt" required />
             <div class="file-upload-label" id="fileLabel"><span class="material-symbols-outlined">folder_open</span> Choose your peak file...</div>
           </div>
-          <div class="validation-error" id="fileError">Please select a valid file under 4.5 MB</div>
+          <div class="validation-error" id="fileError">Please select a valid file under 50 MB</div>
         </div>
 
         <div class="form-row">
@@ -307,7 +307,16 @@
 
     async function downloadOutputFile(filename, fileData, fallbackName='results') {
       try {
-        // Binary base64 path
+        // S3 presigned URL path
+        if (fileData.type === 's3_presigned' && fileData.download_url) {
+          const a = document.createElement('a');
+          a.href = fileData.download_url;
+          a.download = filename || fallbackName;
+          document.body.appendChild(a); a.click(); a.remove();
+          return;
+        }
+
+        // Binary base64 path (legacy inline)
         if (fileData.type === 'binary_base64' && typeof fileData.content === 'string') {
           const b = b64ToBytes(fileData.content);
           const blob = new Blob([b]);
@@ -319,7 +328,7 @@
           return;
         }
 
-        // Text path (possibly compressed)
+        // Text path (legacy inline, possibly compressed)
         const text = decompressToText(fileData);
         saveTextAsCsv(filename || `${fallbackName}.csv`, text);
       } catch (err) {
@@ -407,11 +416,22 @@
           const mount = fileSection.querySelector('.preview-mount');
 
           // Auto-render preview table
-          try {
-            const text = decompressToText(fileData);
-            renderCsvPreview(mount, text, 20);
-          } catch (err) {
-            mount.innerHTML = `<div class="error">${err.message}</div>`;
+          if (fileData.type === 's3_presigned' && fileData.download_url) {
+            if (filename.endsWith('.csv')) {
+              fetch(fileData.download_url)
+                .then(r => r.text())
+                .then(text => renderCsvPreview(mount, text, 20))
+                .catch(() => { mount.innerHTML = '<div class="muted">Preview not available.</div>'; });
+            } else {
+              mount.innerHTML = '<div class="muted">Preview not available for non-ASCII files.</div>';
+            }
+          } else {
+            try {
+              const text = decompressToText(fileData);
+              renderCsvPreview(mount, text, 20);
+            } catch (err) {
+              mount.innerHTML = `<div class="error">${err.message}</div>`;
+            }
           }
 
           downloadBtn.addEventListener('click', () => {
@@ -429,7 +449,7 @@
     }
 
     // Validation constants
-    const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
     const VALID_PEAK_TYPES = ['BED6', 'MACS2', 'SEACR'];
     const VALID_SPECIES = ['dm6', 'xenTro10', 'hg38', 'hg19', 'mm10', 'mm39', 'susScr11', 'ce11', 'sacCer3', 'danRer11'];
     const VALID_K_VALUES = ['1', '2', '3'];
@@ -617,12 +637,27 @@
       submitBtn.disabled = true;
 
       try {
-        // Read file text
-        const content = await readFileAsText(file);
         const outputName = '.peakscout';
-
         const useCre = document.getElementById('useCre').checked;
 
+        // Step 1: get presigned PUT URL from Lambda
+        const urlResp = await fetch(LAMBDA_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_upload_url', filename: file.name })
+        });
+        if (!urlResp.ok) throw new Error(`Failed to get upload URL: HTTP ${urlResp.status}`);
+        const { upload_url, s3_input_key } = await urlResp.json();
+
+        // Step 2: upload file directly to S3 (no Lambda payload limit)
+        const putResp = await fetch(upload_url, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': 'application/octet-stream' }
+        });
+        if (!putResp.ok) throw new Error(`S3 upload failed: HTTP ${putResp.status}`);
+
+        // Step 3: submit job with S3 key
         const lambdaRequest = {
           command: 'peak2gene',
           args: [
@@ -634,7 +669,7 @@
             '--o', 'results/',
             '--output_type', outputType
           ],
-          input_files: { [file.name]: content },
+          s3_input_key,
           return_files: true,
           use_cre: useCre,
           debug: false
@@ -646,9 +681,7 @@
           body: JSON.stringify(lambdaRequest)
         });
 
-        if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-        }
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
         const raw = await resp.json();
         displayResults(raw, outputName);
