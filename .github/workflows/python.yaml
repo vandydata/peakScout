@@ -11,12 +11,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9.12'  
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install polars numpy pandas openpyxl pyarrow
@@ -43,6 +43,9 @@ jobs:
 
       - name: Test BED6 peak2gene
         run: bash test/test_peak2gene_BED6.sh
+
+      - name: Test MACS2 peak2gene with CRE
+        run: bash test/test_peak2gene_MACS2_cre.sh
 
       - name: Test MACS2 gene2peak
         run: bash test/test_gene2peak_MACS2.sh
