@@ -119,7 +119,34 @@
     display: inline; color: #4a4a4a; font-size: 15px;
   }
   
-  .submit-btn { 
+  .checkbox-group {
+    display: flex; gap: 16px; margin-top: 8px;
+    flex-wrap: nowrap; align-items: center; min-height: 48px;
+  }
+
+  .checkbox-option {
+    display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;
+  }
+
+  .checkbox-option input[type="checkbox"] {
+    width: auto; margin: 3px 0 0; cursor: pointer; accent-color: #3b82f6;
+    flex-shrink: 0;
+  }
+
+  .checkbox-option input[type="checkbox"]:disabled {
+    cursor: not-allowed; opacity: 0.4;
+  }
+
+  .checkbox-option label {
+    margin: 0; font-weight: 400; cursor: pointer;
+    display: flex; flex-direction: column; color: #4a4a4a; font-size: 15px;
+  }
+
+  .checkbox-option input[type="checkbox"]:disabled + label {
+    cursor: not-allowed; opacity: 0.5;
+  }
+
+  .submit-btn {
     width:100%; padding:16px; background:#dbba35; color:#fff; 
     border:none; border-radius:8px; font-size:16px; font-weight:600; 
     cursor:pointer; margin-top:16px; transition: all 0.3s ease;
@@ -189,292 +216,6 @@
     color: #1d4ed8; text-decoration: underline;
   }
   
-  /* ========== RAD 80S RETRO THEME ========== */
-  
-  .retro-theme {
-    font-family: 'Courier New', monospace !important;
-    background: url('retro.jpg') center/cover no-repeat fixed !important;
-    color: #00ffff !important;
-    overflow-x: auto;
-  }
-  
-  .retro-theme .container { 
-    max-width: 900px !important;
-    background: linear-gradient(145deg, #1a1a1a, #2d2d2d) !important;
-    border: 3px solid #00ffff !important;
-    border-radius: 0 !important;
-    box-shadow: 
-      0 0 30px #00ffff,
-      0 0 60px rgba(0,255,255,0.5),
-      inset 0 0 20px rgba(0,255,255,0.1) !important;
-    position: relative;
-  }
-  
-  .retro-theme .container::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(45deg, 
-      transparent 30%, 
-      rgba(0,255,255,0.05) 50%, 
-      transparent 70%
-    );
-    pointer-events: none;
-  }
-  
-  .retro-theme .header { 
-    background: linear-gradient(135deg, #ff00ff, #00ffff, #ff00ff) !important;
-    background-size: 400% 400%;
-    animation: chromeShift 4s ease-in-out infinite;
-    color: #000 !important;
-    padding: 20px 30px !important;
-    border-bottom: 2px solid #00ffff;
-    box-shadow: 0 4px 20px rgba(0,255,255,0.3);
-  }
-  
-  @keyframes chromeShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-  
-  .retro-theme .header-logo { 
-    filter: drop-shadow(0 0 10px #00ffff);
-  }
-  
-  .retro-theme .header-description { 
-    font-weight: bold !important;
-    text-shadow: 0 0 10px rgba(255,255,255,0.8);
-    color: #000 !important;
-  }
-  
-  .retro-theme .header-link { 
-    color: #000 !important;
-    font-weight: bold !important;
-    padding: 8px 16px !important;
-    background: linear-gradient(45deg, #00ffff, #ff00ff) !important;
-    border: 1px solid #fff !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 0 10px rgba(0,255,255,0.5);
-    border-radius: 0 !important;
-  }
-  
-  .retro-theme .header-link:hover { 
-    background: linear-gradient(45deg, #ff00ff, #00ffff) !important;
-    box-shadow: 0 0 20px rgba(255,0,255,0.8);
-    transform: scale(1.05) !important;
-  }
-  
-  .retro-theme .form-container { 
-    background: linear-gradient(145deg, #0d0d0d, #1a1a1a) !important;
-    position: relative;
-  }
-  
-  .retro-theme .form-container::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at 50% 50%, rgba(0,255,255,0.1) 0%, transparent 50%);
-    pointer-events: none;
-  }
-  
-  .retro-theme label { 
-    color: #00ffff !important;
-    font-weight: bold !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-shadow: 0 0 5px #00ffff;
-    font-size: 14px !important;
-  }
-  
-  .retro-theme .form-hint { 
-    color: #ff00ff !important;
-    font-style: italic;
-  }
-  
-  .retro-theme input, .retro-theme select { 
-    border: 2px solid #00ffff !important;
-    background: linear-gradient(145deg, #1a1a1a, #2d2d2d) !important;
-    color: #00ffff !important;
-    font-family: 'Courier New', monospace !important;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-    border-radius: 0 !important;
-  }
-  
-  .retro-theme input:focus, .retro-theme select:focus { 
-    border-color: #ff00ff !important;
-    box-shadow: 
-      0 0 20px rgba(255,0,255,0.5),
-      inset 0 2px 4px rgba(0,0,0,0.3) !important;
-    background: linear-gradient(145deg, #2d1a2d, #1a2d1a) !important;
-  }
-  
-  .retro-theme .file-upload-label { 
-    border: 2px dashed #00ffff !important;
-    background: linear-gradient(145deg, #0d0d0d, #1a1a1a) !important;
-    color: #00ffff !important;
-    font-family: 'Courier New', monospace !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: inset 0 0 10px rgba(0,255,255,0.1);
-    border-radius: 0 !important;
-  }
-  
-  .retro-theme .file-upload-label:hover { 
-    border-color: #ff00ff !important;
-    background: linear-gradient(145deg, #1a0d1a, #2d1a2d) !important;
-    box-shadow: 0 0 20px rgba(255,0,255,0.3);
-  }
-  
-  .retro-theme .file-upload-label.has-file { 
-    border-color: #00ff00 !important;
-    background: linear-gradient(145deg, #0d1a0d, #1a2d1a) !important;
-    color: #00ff00 !important;
-    box-shadow: 0 0 20px rgba(0,255,0,0.3);
-  }
-  
-  .retro-theme .file-upload-label.error { 
-    border-color: #ff0000 !important;
-    background: linear-gradient(145deg, #1a0d0d, #2d1a1a) !important;
-    color: #ff0000 !important;
-    box-shadow: 0 0 20px rgba(255,0,0,0.3);
-  }
-  
-  .retro-theme .radio-option {
-    padding: 8px 12px;
-    border: 1px solid #00ffff;
-    background: linear-gradient(145deg, #0d0d0d, #1a1a1a);
-  }
-  
-  .retro-theme .radio-option:hover {
-    border-color: #ff00ff;
-    box-shadow: 0 0 10px rgba(255,0,255,0.3);
-  }
-  
-  .retro-theme .radio-option input[type="radio"] {
-    accent-color: #00ffff;
-    scale: 1.2;
-  }
-  
-  .retro-theme .radio-option label {
-    color: #00ffff !important;
-    font-weight: bold !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 14px !important;
-  }
-  
-  .retro-theme .submit-btn { 
-    background: linear-gradient(45deg, #ff00ff, #00ffff, #ff00ff) !important;
-    background-size: 200% 200%;
-    animation: chromeShift 3s ease-in-out infinite;
-    color: #000 !important;
-    border: 2px solid #fff !important;
-    font-size: 18px !important;
-    font-family: 'Courier New', monospace !important;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    box-shadow: 0 0 20px rgba(0,255,255,0.5);
-    border-radius: 0 !important;
-  }
-  
-  .retro-theme .submit-btn:hover { 
-    transform: scale(1.02) !important;
-    box-shadow: 0 0 30px rgba(255,0,255,0.8) !important;
-    border-color: #ff00ff !important;
-  }
-  
-  .retro-theme .results { 
-    background: linear-gradient(145deg, #0d0d0d, #1a1a1a) !important;
-    border-top: 2px solid #00ffff;
-    box-shadow: 0 -4px 20px rgba(0,255,255,0.2);
-  }
-  
-  .retro-theme .download-btn { 
-    background: linear-gradient(45deg, #00ffff, #ff00ff) !important;
-    color: #000 !important;
-    border: 2px solid #fff !important;
-    font-family: 'Courier New', monospace !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 0 15px rgba(0,255,255,0.5);
-    border-radius: 0 !important;
-  }
-  
-  .retro-theme .download-btn:hover {
-    background: linear-gradient(45deg, #ff00ff, #00ffff) !important;
-    box-shadow: 0 0 25px rgba(255,0,255,0.8) !important;
-    transform: scale(1.05) !important;
-  }
-  
-  .retro-theme .table-scroll { 
-    border: 2px solid #00ffff !important;
-    background: linear-gradient(145deg, #0d0d0d, #1a1a1a) !important;
-    box-shadow: 0 0 20px rgba(0,255,255,0.2);
-    border-radius: 0 !important;
-  }
-  
-  .retro-theme table.preview { 
-    font-family: 'Courier New', monospace !important;
-    color: #00ffff !important;
-    font-size: 11px !important;
-  }
-  
-  .retro-theme table.preview thead th { 
-    background: linear-gradient(145deg, #1a1a1a, #2d2d2d) !important;
-    border-bottom: 2px solid #00ffff !important;
-    color: #00ffff !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 10px !important;
-  }
-  
-  .retro-theme table.preview thead th.closest-col { 
-    background: linear-gradient(45deg, #ff00ff, #00ffff) !important;
-    color: #000 !important;
-    box-shadow: 0 0 10px rgba(255,0,255,0.5);
-  }
-  
-  .retro-theme table.preview tbody td { 
-    border-bottom: 1px solid #333 !important;
-    background: linear-gradient(145deg, #0d0d0d, #151515) !important;
-  }
-  
-  .retro-theme table.preview tbody tr:hover td {
-    background: linear-gradient(145deg, #1a0d1a, #2d1a2d) !important;
-    color: #ff00ff !important;
-  }
-  
-  .retro-theme .footer {
-    color: #00ffff !important;
-    background: linear-gradient(145deg, #1a1a1a, #2d2d2d) !important;
-    border: 3px solid #00ffff !important;
-    font-family: 'Courier New', monospace !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    max-width: 900px !important;
-    margin: 20px auto 0 auto !important;
-    box-shadow: 
-      0 0 30px #00ffff,
-      0 0 60px rgba(0,255,255,0.5),
-      inset 0 0 20px rgba(0,255,255,0.1) !important;
-    border-radius: 0 !important;
-  }
-  
-  .retro-theme .footer p {
-    text-shadow: 0 0 5px #00ffff;
-  }
-  
-  .retro-theme .footer a {
-    color: #ff00ff !important;
-    text-shadow: 0 0 5px #ff00ff;
-  }
-  
-  .retro-theme .footer a:hover {
-    color: #00ffff !important;
-    text-shadow: 0 0 10px #00ffff;
-  }
 
   /* Common styles and responsive */
   .form-row { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
@@ -498,11 +239,6 @@
   .job-details.show { display: block; }
 
   /* Retro theme overrides for common elements */
-  .retro-theme .validation-error { color: #ff0000 !important; text-shadow: 0 0 5px #ff0000; }
-  .retro-theme .loading { background: linear-gradient(145deg, #0d0d0d, #1a1a1a) !important; color: #00ffff !important; }
-  .retro-theme .spinner { border: 4px solid #1a1a1a !important; border-top: 4px solid #00ffff !important; border-right: 4px solid #ff00ff !important; box-shadow: 0 0 20px rgba(0,255,255,0.5); }
-  .retro-theme .error { background: linear-gradient(145deg, #1a0d0d, #2d1a1a) !important; border: 2px solid #ff0000 !important; color: #ff0000 !important; font-family: 'Courier New', monospace !important; box-shadow: 0 0 20px rgba(255,0,0,0.3); }
-  .retro-theme .success { background: linear-gradient(145deg, #0d1a0d, #1a2d1a) !important; border: 2px solid #00ff00 !important; color: #00ff00 !important; font-family: 'Courier New', monospace !important; box-shadow: 0 0 20px rgba(0,255,0,0.3); }
 
   @media (max-width: 768px) {
     .header { grid-template-columns: 1fr; justify-items: center; gap: 16px; }
@@ -584,15 +320,6 @@
   }
 
   /* Retro theme overrides for job details */
-  .retro-theme .job-details-toggle {
-    color: #00ffff !important;
-    text-shadow: 0 0 5px #00ffff;
-  }
-  
-  .retro-theme .job-details-toggle:hover {
-    color: #ff00ff !important;
-    text-shadow: 0 0 5px #ff00ff;
-  }
 
   p small { font-size:12px; color:#6b7280; margin-bottom:20px; padding-bottom:20px; }
 

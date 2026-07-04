@@ -559,7 +559,7 @@ def add_cre_annotations(peaks_df: pl.DataFrame, cre_df: pl.DataFrame) -> pl.Data
         if has_accession:
             agg_exprs.append(pl.col("cre_accession_raw").str.join("; ").alias("cre_accession"))
         if has_type:
-            agg_exprs.append(pl.col("cre_type_raw").str.join("; ").alias("cre_type"))
+            agg_exprs.append(pl.col("cre_type_raw").unique().str.join("; ").alias("cre_type"))
 
         hits = overlaps.group_by("_idx").agg(agg_exprs)
 

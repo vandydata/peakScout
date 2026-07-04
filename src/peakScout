@@ -42,6 +42,8 @@ def main(args):
     drop_columns = args.drop_columns
     view_window = args.view_window
     cre_file = args.cre_file
+    if args.use_cre and cre_file is None:
+        cre_file = "auto"
 
     if species_genome is not None:
         check_species(species_genome)
@@ -131,7 +133,8 @@ if __name__ == "__main__":
     parser.add_argument('--consensus', action='store_true', help='Consensus peak file')
     parser.add_argument('--drop_columns', action='store_true', help='Only keep necessary columns from input file')
     parser.add_argument('--view_window', type=float, default=0.2, help='Proportion of the peak region in entire genome browser window')
-    parser.add_argument('--cre_file', type=str, default=None, help='BED file of CRE regions for overlap annotation (BED3 min; BED4 for names). Auto-detected from ref_dir/cre/cre.bed if present.')
+    parser.add_argument('--use_cre', action='store_true', default=False, help='Annotate peaks with cis-regulatory elements (CREs) Auto-detects CRE file from ref_dir/cre/ only for hg38 or mm10')
+    parser.add_argument('--cre_file', type=str, default=None, help='Explicit path to CRE BED file. Implies --use_cre. Overrides auto-detection and is required for non-supported species (anything other than hg38 or mm10)')
 
 
     args = parser.parse_args()

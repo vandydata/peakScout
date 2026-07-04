@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title id="pageTitle">Get genes for your peaks - peakScout</title>
-  <meta name="description" content="peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results" />
+  <title id="pageTitle">peakScout – a biologist-friendly tool for bidirectional peak-gene mapping</title>
+  <meta name="description" content="peakScout – a biologist-friendly tool for bidirectional peak-gene mapping" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.min.js"></script>
@@ -15,7 +15,7 @@
   <div class="container">
     <div class="header">
       <img src="logo.svg" alt="PeakScout Logo" class="header-logo" />
-      <p class="header-description">peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results</p>
+      <p class="header-description">peakScout – a biologist-friendly tool for bidirectional peak-gene mapping</p>
       <div class="header-links">
         <a href="https://doi.org/10.1101/2025.09.07.671934" class="header-link" title="Research article (coming soon)">
           <span class="material-symbols-outlined">article</span>
@@ -37,7 +37,7 @@
       <form id="peakscoutForm">
         <div class="form-group">
           <label for="peakFile">Peak File</label>
-          <div class="form-hint">Select MACS2, SEACR or BED file (max 4.5 MB)</div>
+          <div class="form-hint">Select MACS2, SEACR or BED file (max 4.5 MB - for larger files, please use the CLI version of peakScout)</div>
           <div class="file-upload">
             <input type="file" id="peakFile" accept=".bed,.narrowPeak,.txt" required />
             <div class="file-upload-label" id="fileLabel"><span class="material-symbols-outlined">folder_open</span> Choose your peak file...</div>
@@ -123,6 +123,22 @@
             <label for="outputName">Output Name</label>
             <input type="text" id="outputName" value=".peakscout" required />
           </div>-->
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Optional</label>
+            <div class="form-hint">Additional annotations based on peak overlap</div>
+            <div class="checkbox-group">
+              <div class="checkbox-option" id="creOptionWrapper">
+                <input type="checkbox" id="useCre" name="useCre" disabled />
+                <label for="useCre">
+                  ENCODE cCREs V4
+                  <span class="form-hint" id="creHint">Select hg38 or mm10 to enable</span>
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
 
         <button type="submit" class="submit-btn" id="submitBtn"><span class="material-symbols-outlined">search_insights</span> Run PeakScout Analysis</button>
@@ -494,8 +510,24 @@
       });
     });
 
+    const CRE_SPECIES = new Set(['hg38', 'mm10']);
+    function updateCreCheckbox(species) {
+      const cb = document.getElementById('useCre');
+      const hint = document.getElementById('creHint');
+      if (CRE_SPECIES.has(species)) {
+        cb.disabled = false;
+        hint.textContent = 'Candidate cis-Regulatory Elements (cCREs)';
+      } else {
+        cb.disabled = true;
+        cb.checked = false;
+        hint.textContent = 'Select hg38 or mm10 to enable';
+      }
+    }
+    updateCreCheckbox(document.getElementById('species').value);
+
     document.getElementById('species').addEventListener('change', (e) => {
       hideFieldError('species');
+      updateCreCheckbox(e.target.value);
       if (!validateSpecies(e.target.value)) {
         showFieldError('species', 'Invalid species selected');
       }
@@ -584,6 +616,8 @@
         const content = await readFileAsText(file);
         const outputName = '.peakscout';
 
+        const useCre = document.getElementById('useCre').checked;
+
         const lambdaRequest = {
           command: 'peak2gene',
           args: [
@@ -597,6 +631,7 @@
           ],
           input_files: { [file.name]: content },
           return_files: true,
+          use_cre: useCre,
           debug: false
         };
 
@@ -621,50 +656,12 @@
       }
     });
 
-    // Theme toggle functionality
-    let isRetroTheme = false;
-
-    function toggleTheme() {
-      isRetroTheme = !isRetroTheme;
-      const body = document.body;
-      const toggle = document.getElementById('themeToggle');
-      const title = document.getElementById('pageTitle');
-      
-      if (isRetroTheme) {
-        body.classList.add('retro-theme');
-        toggle.textContent = '🎨 Switch to Clean Theme 🎨';
-        title.textContent = '⚡ PEAKSCOUT \'85 ⚡ CYBER GENOMICS TERMINAL';
-        // Save preference
-        localStorage.setItem('peakscout-theme', 'retro');
-      } else {
-        body.classList.remove('retro-theme');
-        toggle.textContent = '⚡ Switch to Rad 80\'s Theme ⚡';
-        title.textContent = 'PeakScout - Annotate your peaks!';
-        // Save preference
-        localStorage.setItem('peakscout-theme', 'clean');
-      }
-    }
-
-    // Load saved theme preference on page load
-    document.addEventListener('DOMContentLoaded', function() {
-      const savedTheme = localStorage.getItem('peakscout-theme');
-      if (savedTheme === 'retro') {
-        toggleTheme();
-      }
-    });
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
   </script>
 
   <footer class="footer">
-
-  <p><strong>Change log:</strong></p>
-    <ul>
-      <li><small>2026-01-12 - Added AWS EventBridge event to keep peakScout Lambda warm (<a href="https://github.com/vandydata/peakScout/issues/17">#17</a>)</small>
-</li>
-    </ul>
-    <br>
-    <p>If you use peakScout for a publication, please cite it via its <a href="https://doi.org/10.1101/2025.09.07.671934">DOI</a> ! Thank you.</p>
-    <p>&copy; 2025 - <a href="https://cds.vanderbilt.edu">Creative Data Solutions</a>, Vanderbilt University</p>
-    <p><a href="#" onclick="toggleTheme()" id="themeToggle">👾</a></p>
+    <p>If you use peakScout for a publication, please <a href="https://doi.org/10.1101/2025.09.07.671934" target="_blank" rel="noopener">cite it</a>! Thank you.</p>
+    <p>&copy; 2025–<span id="currentYear"></span> <a href="https://cds.vanderbilt.edu">Creative Data Solutions</a>, Vanderbilt University <br> <a href="https://github.com/vandydata/peakScout/releases">Version 1.1</a></p>
   </footer>
 
 </body>

@@ -285,16 +285,19 @@ def resolve_cre_file(cre_file: str, ref_dir: str) -> str:
     Resolve the CRE BED file path.
 
     Parameters:
-    cre_file (str): Explicit path to a CRE BED file, or None to auto-detect.
+    cre_file (str): Explicit path to a CRE BED file; "auto" to auto-detect from ref_dir;
+                    or None to skip CRE annotation entirely.
     ref_dir (str): Reference directory used to locate the default CRE file.
 
     Returns:
-    path (str): Resolved path to the CRE BED file, or None if not found.
+    path (str): Resolved path to the CRE BED file, or None if not found / not requested.
 
     Outputs:
     None
     """
-    if cre_file:
+    if cre_file is None:
+        return None
+    if cre_file != "auto":
         return cre_file
     species = os.path.basename(os.path.normpath(ref_dir))
     default = os.path.join(ref_dir, "cre", f"{species}-cre.bed")

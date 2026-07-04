@@ -3,6 +3,7 @@ import subprocess
 import os
 import tempfile
 import shutil
+import uuid
 from pathlib import Path
 import boto3
 import tarfile
@@ -35,6 +36,47 @@ def extract_zst(archive: Path, out_path: Path):
         ofh.seek(0)
         with tarfile.open(fileobj=ofh) as z:
             z.extractall(out_path)
+
+CRE_SPECIES = {'hg38', 'mm10'}
+
+
+def download_cre(species_genome, ref_dir, bucket_name='cds-peakscout-public'):
+    """
+    Download and decompress a species CRE BED file from S3 into ref_dir/cre/
+
+    Parameters
+    ----------
+    species_genome: str
+    ref_dir:        str  path where reference is extracted (cre/ placed as sibling of gene/)
+    bucket_name:    str
+
+    Returns
+    -------
+    str: path to decompressed CRE BED file
+    """
+    cre_dir = os.path.join(ref_dir, 'cre')
+    cre_path = os.path.join(cre_dir, f'{species_genome}-cre.bed')
+
+    if os.path.exists(cre_path):
+        print(f"CRE for {species_genome} already cached at {cre_path}")
+        return cre_path
+
+    os.makedirs(cre_dir, exist_ok=True)
+    s3_key = f'{species_genome}-cre.bed.zst'
+    zst_path = os.path.join('/tmp', s3_key)
+
+    print(f"Downloading {s3_key} from S3...")
+    boto3.client('s3').download_file(bucket_name, s3_key, zst_path)
+
+    print(f"Decompressing {s3_key}...")
+    dctx = zstandard.ZstdDecompressor()
+    with open(zst_path, 'rb') as ifh, open(cre_path, 'wb') as ofh:
+        dctx.copy_stream(ifh, ofh)
+    os.remove(zst_path)
+
+    print(f"CRE ready at {cre_path}")
+    return cre_path
+
 
 def download_and_extract_reference(species_genome_genome, bucket_name='cds-peakscout-public'):
     """
@@ -210,24 +252,15 @@ def get_preview(content, preview_lines=5):
     return '\n'.join(lines[:preview_lines])
 
 
-# CORS helper functions - must be defined before handler()
-def _cors_headers():
-    # Check if we're running locally (Docker) vs AWS Lambda
-    import os
-    
-    function_name = os.environ.get('AWS_LAMBDA_FUNCTION_NAME', '')
-    
-    # If running in AWS, use name of your deployed function (from web console)
-    if function_name == 'peakscout-containerized':
-        return {}  # Let Function URL handle CORS in AWS
-    else:
-        # Local development (function name is 'test_function' or anything else)
-        return {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-        }
-
+def upload_result_to_s3(file_path: Path, run_id: str, s3_client, bucket: str, ttl: int) -> tuple:
+    key = f"results/{run_id}/{file_path.name}"
+    s3_client.upload_file(str(file_path), bucket, key)
+    url = s3_client.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': bucket, 'Key': key},
+        ExpiresIn=ttl,
+    )
+    return url, key
 
 
 # CORS helper functions - must be defined before handler()
@@ -270,9 +303,12 @@ def handler(event, context):
         args = event.get('args', [])
         input_files = event.get('input_files', {})
         return_files = event.get('return_files', True)
-        max_file_size = event.get('max_file_size', 5242880)  # 5MB default
+        max_file_size = event.get('max_file_size', 5242880)  # 5MB inline threshold
         s3_bucket = event.get('s3_bucket', 'cds-peakscout-public')
         compress_response = event.get('compress_response', True)
+        s3_output = event.get('s3_output', False)       # force all outputs to S3 presigned URL
+        s3_output_ttl = event.get('s3_output_ttl', 3600)  # presigned URL TTL in seconds
+        use_cre = event.get('use_cre', False)           # download and apply CRE annotation
         
         if not command:
             return {
@@ -313,6 +349,11 @@ def handler(event, context):
             try:
                 ref_dir = download_and_extract_reference(species_genome_genome, s3_bucket)
                 print(f"Reference data ready at: {ref_dir}")
+                if use_cre and species_genome in CRE_SPECIES:
+                    try:
+                        download_cre(species_genome, ref_dir, s3_bucket)
+                    except Exception as cre_err:
+                        print(f"Warning: CRE download failed for {species_genome}: {cre_err}")
             except Exception as e:
                 return {
                     'statusCode': 500,
@@ -378,10 +419,14 @@ def handler(event, context):
                 # Keep all other arguments as-is
                 modified_args.append(arg)
         
-        # Add --ref_dir if it wasn't provided and we have a reference
+        # --ref_dir if it notprovided and ref is available
         if not ref_dir_found and ref_dir:
             modified_args.extend(['--ref_dir', ref_dir])
-        
+
+        # Inject --use_cre when CRE was requested and CRE file not  provided
+        if use_cre and '--cre_file' not in modified_args and '--use_cre' not in modified_args:
+            modified_args.append('--use_cre')
+
         # Build the peakScout command
         cmd = ['python3', 'src/src/peakScout'] + modified_args + [command]
         
@@ -404,63 +449,73 @@ def handler(event, context):
             'ref_dir_used': ref_dir
         }
         
-        # Add debug information if requested
+        # debug information if requested
         if event.get('debug', False):
             response_data['debug_info'] = {
                 'tmp_contents': list_tmp_contents(),
                 'ref_dir_contents': list_directory_contents(ref_dir) if ref_dir else "No reference directory"
             }
         
-        # If successful and return_files is enabled, return output files with compression
+        # If successful and return_files is enabled, return output files
         if result.returncode == 0 and return_files:
             output_files = {}
-            
+            run_id = str(uuid.uuid4())
+            s3_client = boto3.client('s3')
+
             output_path = Path(temp_output_dir)
             if output_path.exists():
-                # Process all output files
                 for file_path in output_path.rglob('*'):
                     if file_path.is_file():
                         try:
                             file_size = file_path.stat().st_size
                             relative_path = str(file_path.relative_to(output_path))
-                            
-                            # Check if file is too large (>5MB)
-                            if file_size > max_file_size:
-                                output_files[relative_path] = {
-                                    'size': file_size,
-                                    'type': 'file_too_large',
-                                    'error': f'File too large ({file_size:,} bytes). Maximum supported: {max_file_size:,} bytes. Please reduce file size and try again.'
-                                }
+                            use_s3 = s3_output or file_size > max_file_size
+
+                            if use_s3:
+                                try:
+                                    url, s3_key = upload_result_to_s3(
+                                        file_path, run_id, s3_client, s3_bucket, s3_output_ttl
+                                    )
+                                    output_files[relative_path] = {
+                                        'type': 's3_presigned',
+                                        'download_url': url,
+                                        'url_expires_in': s3_output_ttl,
+                                        's3_key': s3_key,
+                                        'size': file_size,
+                                    }
+                                except Exception as e:
+                                    output_files[relative_path] = {
+                                        'type': 'processing_error',
+                                        'error': f'S3 upload failed: {str(e)}',
+                                        'size': file_size,
+                                    }
                             else:
-                                # Read and compress file content
                                 try:
                                     with open(file_path, 'r', encoding='utf-8') as f:
                                         content = f.read()
-                                    
                                     output_files[relative_path] = {
                                         'content_preview': get_preview(content),
                                         'content': compress_content(content),
                                         'content_compressed': True,
                                         'compression_type': 'zstd',
                                         'size': file_size,
-                                        'type': 'text'
+                                        'type': 'text',
                                     }
                                 except UnicodeDecodeError:
-                                    # Binary file, encode as base64
                                     with open(file_path, 'rb') as f:
                                         binary_content = f.read()
                                     output_files[relative_path] = {
                                         'content': base64.b64encode(binary_content).decode('utf-8'),
                                         'content_compressed': False,
                                         'size': file_size,
-                                        'type': 'binary_base64'
+                                        'type': 'binary_base64',
                                     }
                         except Exception as e:
                             output_files[relative_path] = {
                                 'type': 'processing_error',
-                                'error': str(e)
+                                'error': str(e),
                             }
-            
+
             response_data['output_files'] = output_files
             response_data['files_found'] = len(output_files)
         

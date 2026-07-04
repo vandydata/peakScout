@@ -1,5 +1,59 @@
 
 # AWS, Lambda, Docker
+
+## S3 Reference Archives
+
+Reference data is stored in `s3://cds-peakscout-public/` as `.tar.zst` archives.
+Lambda downloads and extracts these to `/tmp` at runtime.
+
+### Genome reference archives
+
+| File | Species | Size |
+|------|---------|------|
+| `human_hg38.tar.zst` | hg38 | ~115 MB |
+| `mouse_mm10.tar.zst` | mm10 | ~88 MB |
+| `mouse_mm39.tar.zst` | mm39 | ~57 MB |
+| `human_hg19.tar.zst` | hg19 | ~51 MB |
+| `fly_BDGP6.54.tar.zst` | dm6 | ~11 MB |
+| `worm_WBcel235.tar.zst` | ce11 | ~18 MB |
+| `zebrafish_GRCz11.tar.zst` | danRer11 | ~36 MB |
+| `pig_Sscrofa11.1.tar.zst` | susScr11 | ~30 MB |
+| `arabidopsis_TAIR10.tar.zst` | tair10 | ~20 MB |
+| `yeast_R64-1-1.tar.zst` | sacCer3 | <1 MB |
+| `frog_v10.1.tar.zst` | xenTro10 | ~28 MB |
+
+Internal structure: `reference/{species_full_name}/{feature}/chr*_{start,end}.csv`
+
+### CRE archives (separate, hg38 and mm10 only)
+
+| File | Species | Uncompressed | Compressed |
+|------|---------|-------------|-----------|
+| `hg38-cre.bed.zst` | hg38 | 129 MB | 36 MB |
+| `mm10-cre.bed.zst` | mm10 | 51 MB | 14 MB |
+
+Downloaded by Lambda only when `use_cre: true` is set in the event payload. Placed at
+`{ref_dir}/cre/{species}-cre.bed`. CLI equivalent: `--use_cre` flag (or `--cre_file <path>` for an explicit path).
+CRE download failure is non-fatal (warning logged, analysis proceeds without CRE).
+
+Source: ENCODE cCRE Registry V4 (hg38 and mm10 only — other assemblies not available).
+
+### Rebuilding an archive
+
+```bash
+# Genome archive (no CRE):
+python3 aws/rebuild_archive.py hg38 human_hg38.tar.zst reference/human_hg38 /dev/null
+# CRE file:
+python3 -c "
+import zstandard, boto3
+cctx = zstandard.ZstdCompressor(level=19, threads=-1)
+with open('reference/hg38/cre/hg38-cre.bed','rb') as i, open('/tmp/hg38-cre.bed.zst','wb') as o:
+    cctx.copy_stream(i, o)
+boto3.client('s3').upload_file('/tmp/hg38-cre.bed.zst','cds-peakscout-public','hg38-cre.bed.zst')
+"
+```
+
+---
+
 ## Build docker container
 
 On local machine:
@@ -41,7 +95,7 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "debug": true
   }'
 
-# Real ref data
+# Real ref data (inline response, small outputs only)
 curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
   -H "Content-Type: application/json" \
   -d '{
@@ -58,6 +112,30 @@ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
     "return_files": true,
     "debug": false
   }'
+
+# Large outputs — use S3 presigned URL (recommended for real datasets)
+# Response contains download_url instead of base64 content. URL expires in s3_output_ttl seconds.
+curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "peak2gene",
+    "args": [
+      "--peak_file", "peaks.narrowPeak",
+      "--peak_type", "MACS2",
+      "--species_genome", "hg38",
+      "--k", "3",
+      "--output_name", "results",
+      "--o", "out/",
+      "--output_type", "csv"
+    ],
+    "input_files": {"peaks.narrowPeak": "<content>"},
+    "return_files": true,
+    "s3_output": true,
+    "s3_output_ttl": 3600
+  }'
+# output_files["results.csv"]["download_url"] → presigned S3 URL valid for 1 hour
+# Results stored at s3://cds-peakscout-public/results/{uuid}/{filename}
+# NOTE: Lambda IAM role needs s3:PutObject on cds-peakscout-public/results/*
 
 # Real input data, real ref data
 # 202-403-Cha_J__MAFB_WT_R1.macs2_peaks.xls
