@@ -147,7 +147,7 @@
       <div class="loading" id="loading">
         <div class="spinner"></div>
         <p>Running PeakScout analysis...</p>
-        <small class="muted">This may take a few minutes</small>
+        <small class="muted">This usually takes less than a minute, since we may have to warm up some clouds</small>
       </div>
 
       <div class="results" id="results"></div>
@@ -656,7 +656,9 @@
       }
     });
 
-    document.getElementById('currentYear').textContent = new Date().getFullYear();
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('currentYear').textContent = new Date().getFullYear();
+    });
   </script>
 
   <footer class="footer">
