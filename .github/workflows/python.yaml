@@ -19,7 +19,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install polars numpy pandas openpyxl pyarrow
+        run: pip install polars numpy pyarrow xlsxwriter
 
       - name: Create executable
         working-directory: src
