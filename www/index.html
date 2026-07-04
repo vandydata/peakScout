@@ -243,7 +243,7 @@
       }
 
       // Boom!
-      throw new Error('Not a text-CSV artifact (binary or unknown type).');
+      throw new Error('Preview not available for non-ASCII files');
     }
 
     // Render CSV preview table (first N rows)
@@ -411,7 +411,7 @@
             const text = decompressToText(fileData);
             renderCsvPreview(mount, text, 20);
           } catch (err) {
-            mount.innerHTML = `<div class="error">Failed to preview: ${err.message}</div>`;
+            mount.innerHTML = `<div class="error">${err.message}</div>`;
           }
 
           downloadBtn.addEventListener('click', () => {
