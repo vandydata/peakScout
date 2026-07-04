@@ -4,6 +4,7 @@ import os
 import tempfile
 import shutil
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 import boto3
 import tarfile
@@ -230,8 +231,8 @@ def get_preview(content, preview_lines=5):
     return '\n'.join(lines[:preview_lines])
 
 
-def upload_result_to_s3(file_path: Path, run_id: str, s3_client, ttl: int = 3600) -> tuple:
-    key = f"results/{run_id}/{file_path.name}"
+def upload_result_to_s3(file_path: Path, session_id: str, s3_client, ttl: int = 3600) -> tuple:
+    key = f"{session_id}/results/{file_path.name}"
     s3_client.upload_file(str(file_path), UPLOAD_BUCKET, key)
     url = s3_client.generate_presigned_url(
         'get_object',
@@ -280,8 +281,9 @@ def handler(event, context):
         # Presigned upload URL request — fast path, no peakScout involved
         if event.get('action') == 'get_upload_url':
             filename = event.get('filename', 'upload.bed')
-            run_id = str(uuid.uuid4())
-            key = f"uploads/{run_id}/{filename}"
+            date_prefix = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            session_id = f"{date_prefix}-{uuid.uuid4()}"
+            key = f"{session_id}/input/{filename}"
             s3_client = boto3.client('s3')
             url = s3_client.generate_presigned_url(
                 'put_object',
@@ -291,7 +293,7 @@ def handler(event, context):
             return {
                 'statusCode': 200,
                 'headers': _cors_headers(),
-                'body': json.dumps({'upload_url': url, 's3_input_key': key}),
+                'body': json.dumps({'upload_url': url, 's3_input_key': key, 'session_id': session_id}),
             }
 
         command = event.get('command')
@@ -303,6 +305,13 @@ def handler(event, context):
         compress_response = event.get('compress_response', True)
         s3_output_ttl = event.get('s3_output_ttl', 3600)
         use_cre = event.get('use_cre', False)
+
+        # Derive session_id: reuse folder from upload key, or mint a fresh dated one
+        if s3_input_key:
+            session_id = s3_input_key.split('/')[0]
+        else:
+            date_prefix = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            session_id = f"{date_prefix}-{uuid.uuid4()}"
         
         if not command:
             return {
@@ -439,19 +448,23 @@ def handler(event, context):
         cmd = ['python3', 'src/peakScout'] + modified_args + [command]
         
         # Execute the command
+        import time
+        t0 = time.monotonic()
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             cwd='/var/task'
         )
-        
+        elapsed_seconds = round(time.monotonic() - t0, 2)
+
         # Prepare response
         response_data = {
             'command': ' '.join(cmd),
             'stdout': result.stdout,
             'stderr': result.stderr,
             'returncode': result.returncode,
+            'elapsed_seconds': elapsed_seconds,
             'temp_output_dir': temp_output_dir,
             'species': species_genome,
             'ref_dir_used': ref_dir
@@ -467,7 +480,6 @@ def handler(event, context):
         # If successful and return_files is enabled, return output files
         if result.returncode == 0 and return_files:
             output_files = {}
-            run_id = str(uuid.uuid4())
 
             output_path = Path(temp_output_dir)
             if output_path.exists():
@@ -479,7 +491,7 @@ def handler(event, context):
 
                             try:
                                 url, s3_key = upload_result_to_s3(
-                                    file_path, run_id, s3_client, s3_output_ttl
+                                    file_path, session_id, s3_client, s3_output_ttl
                                 )
                                 output_files[relative_path] = {
                                     'type': 's3_presigned',
