@@ -356,7 +356,10 @@
         return;
       }
 
-      let html = '<div class="success"><h3><span class="material-symbols-outlined">check_circle</span> Analysis Complete!</h3></div>';
+      const runtimeStr = (typeof data.elapsed_seconds === 'number')
+        ? ` <span class="muted" style="font-size:0.85em;font-weight:normal;">completed in ${data.elapsed_seconds}s</span>`
+        : '';
+      let html = `<div class="success"><h3><span class="material-symbols-outlined">check_circle</span> Analysis Complete!${runtimeStr}</h3></div>`;
 
       // Add job details toggle right after success message
       let hasJobDetails = data.command || (data.stdout && data.stdout.trim()) || (data.output_files && Object.values(data.output_files).some(file => file.content_preview));

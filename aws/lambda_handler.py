@@ -285,7 +285,7 @@ def handler(event, context):
             s3_client = boto3.client('s3')
             url = s3_client.generate_presigned_url(
                 'put_object',
-                Params={'Bucket': UPLOAD_BUCKET, 'Key': key},
+                Params={'Bucket': UPLOAD_BUCKET, 'Key': key, 'ContentType': 'application/octet-stream'},
                 ExpiresIn=900,  # 15 min to complete upload
             )
             return {
