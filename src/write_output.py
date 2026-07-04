@@ -80,17 +80,25 @@ def write_to_excel(output: pl.DataFrame, output_name: str, out_dir: str) -> None
     start_col_idx = columns.index("start") if "start" in columns else None
     end_col_idx   = columns.index("end")   if "end"   in columns else None
 
-    # Write data rows
-    for row_idx, row in enumerate(output.iter_rows(), start=1):
-        for col_idx, value in enumerate(row):
-            if col_idx == url_col_idx and value and str(value).startswith("http"):
-                if chr_col_idx is not None and start_col_idx is not None and end_col_idx is not None:
-                    display = f"Visualize {row[chr_col_idx]}:{row[start_col_idx]}-{row[end_col_idx]} in genome browser"
+    # Write data columns in bulk; URL column handled cell-by-cell (needs write_url)
+    chr_data   = output["chr"].to_list()   if chr_col_idx   is not None else None
+    start_data = output["start"].to_list() if start_col_idx is not None else None
+    end_data   = output["end"].to_list()   if end_col_idx   is not None else None
+
+    for col_idx, col in enumerate(columns):
+        col_data = output[col].to_list()
+        if col_idx == url_col_idx:
+            for row_idx, value in enumerate(col_data, start=1):
+                if value and str(value).startswith("http"):
+                    if chr_data and start_data and end_data:
+                        display = f"Visualize {chr_data[row_idx-1]}:{start_data[row_idx-1]}-{end_data[row_idx-1]} in genome browser"
+                    else:
+                        display = str(value)
+                    worksheet.write_url(row_idx, col_idx, str(value), url_format, display)
                 else:
-                    display = str(value)
-                worksheet.write_url(row_idx, col_idx, str(value), url_format, display)
-            else:
-                worksheet.write(row_idx, col_idx, value)
+                    worksheet.write(row_idx, col_idx, value)
+        else:
+            worksheet.write_column(1, col_idx, col_data)
 
     workbook.close()
 

@@ -112,14 +112,14 @@
           <div class="form-group">
             <label>Output Format</label>
             <div class="form-hint">Choose download format</div>
-            <div class="radio-group">
+            <div class="radio-group" style="flex-direction: column; gap: 6px;">
               <div class="radio-option">
-                <input type="radio" id="outputTypeXlsx" name="outputType" value="xlsx" required checked />
-                <label for="outputTypeXlsx">Excel (.xlsx)</label>
+                <input type="radio" id="outputTypeCsv" name="outputType" value="csv" required checked />
+                <label for="outputTypeCsv">CSV (.csv, fastest to generate)</label>
               </div>
               <div class="radio-option">
-                <input type="radio" id="outputTypeCsv" name="outputType" value="csv" required />
-                <label for="outputTypeCsv">CSV (.csv)</label>
+                <input type="radio" id="outputTypeXlsx" name="outputType" value="xlsx" required />
+                <label for="outputTypeXlsx">Excel (.xlsx, slower by ~5X, but colored and with hyperlinks)</label>
               </div>
             </div>
             <div class="validation-error" id="outputTypeError">Please select a valid output format</div>
@@ -352,14 +352,14 @@
 
       if (!ok) {
         const msg = data.stderr || data.error || 'Unknown error';
-        showError(`Analysis failed: ${msg}`);
+        showError(`peakScout failed: ${msg}`);
         return;
       }
 
       const runtimeStr = (typeof data.elapsed_seconds === 'number')
-        ? ` <span class="muted" style="font-size:0.85em;font-weight:normal;">completed in ${data.elapsed_seconds}s</span>`
+        ? ` <span class="muted" style="font-size:0.85em;font-weight:normal;">Runtime: ${data.elapsed_seconds}s</span>`
         : '';
-      let html = `<div class="success"><h3><span class="material-symbols-outlined">check_circle</span> Analysis Complete!${runtimeStr}</h3></div>`;
+      let html = `<div class="success"><h3><span class="material-symbols-outlined">check_circle</span> peakScout completed!${runtimeStr}</h3></div>`;
 
       // Add job details toggle right after success message
       let hasJobDetails = data.command || (data.stdout && data.stdout.trim()) || (data.output_files && Object.values(data.output_files).some(file => file.content_preview));
@@ -369,13 +369,13 @@
           <div class="job-details">
             ${data.command ? `
               <div class="card" style="border-left:4px solid #28a745; margin-bottom:12px;">
-                <h4><span class="material-symbols-outlined">terminal</span> Command Executed</h4>
+                <h4>Command Executed</h4>
                 <code style="font-size:12px; word-break:break-all;">${data.command}</code>
               </div>
             ` : ''}
             ${data.stdout && data.stdout.trim() ? `
               <div class="card" style="background:#fff7ed; border-left:4px solid #fb923c; margin-bottom:12px;">
-                <h4><span class="material-symbols-outlined">info</span> Notices and warnings</h4>
+                <h4>Notices and warnings</h4>
                 <pre style="font-size:12px; white-space:pre-wrap; margin:0;">${data.stdout}</pre>
               </div>
             ` : ''}
