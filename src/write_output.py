@@ -33,6 +33,15 @@ ROW_COLORS = {
 
 GRID_BORDER_COLOR = "#404040"
 
+# Excel hard limit on hyperlinks per worksheet (xlsxwriter silently drops any past this)
+MAX_WORKSHEET_HYPERLINKS = 65530
+
+NUMERIC_DTYPES = (
+    pl.Int8, pl.Int16, pl.Int32, pl.Int64,
+    pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64,
+    pl.Float32, pl.Float64,
+)
+
 def _col_category(col_name: str) -> str:
     if col_name.startswith("cre_"):
         return "cre"
@@ -121,16 +130,44 @@ def write_to_excel(output: pl.DataFrame, output_name: str, out_dir: str) -> None
         last_col_letter = xlsxwriter.utility.xl_col_to_name(len(columns) - 1)
         worksheet.autofilter(f"A1:{last_col_letter}1")
 
+    # Dispatch directly to the type-specific write_*() methods instead of the generic
+    # write(), which runs regex-based type-sniffing (URL/formula detection) on every cell. We already know each column's dtype from polars, so skip that entirely
+    hyperlinks_written = 0
     for col_idx, col in enumerate(columns):
         col_data = output[col].to_list()
+        fmt = data_formats[col_idx]
+
         if col_idx == url_col_idx:
             for row_idx, value in enumerate(col_data, start=1):
-                if value and str(value).startswith("http"):
+                is_url = value and str(value).startswith("http")
+                if is_url and hyperlinks_written < MAX_WORKSHEET_HYPERLINKS:
                     worksheet.write_url(row_idx, col_idx, str(value), url_formats[col_idx], url_display_text)
+                    hyperlinks_written += 1
+                elif is_url:
+                    # Past Excel's per-worksheet hyperlink limit: worksheet.write() auto-detects
+                    # URL-shaped strings and would register them as hyperlinks anyway, silently
+                    # re-triggering the same limit. write_string() forces plain text instead.
+                    worksheet.write_string(row_idx, col_idx, str(value), fmt)
                 else:
-                    worksheet.write(row_idx, col_idx, value, data_formats[col_idx])
+                    worksheet.write_blank(row_idx, col_idx, None, fmt)
+        elif output[col].dtype == pl.Boolean:
+            for row_idx, value in enumerate(col_data, start=1):
+                if value is None:
+                    worksheet.write_blank(row_idx, col_idx, None, fmt)
+                else:
+                    worksheet.write_boolean(row_idx, col_idx, value, fmt)
+        elif output[col].dtype in NUMERIC_DTYPES:
+            for row_idx, value in enumerate(col_data, start=1):
+                if value is None:
+                    worksheet.write_blank(row_idx, col_idx, None, fmt)
+                else:
+                    worksheet.write_number(row_idx, col_idx, value, fmt)
         else:
-            worksheet.write_column(1, col_idx, col_data, data_formats[col_idx])
+            for row_idx, value in enumerate(col_data, start=1):
+                if value is None:
+                    worksheet.write_blank(row_idx, col_idx, None, fmt)
+                else:
+                    worksheet.write_string(row_idx, col_idx, str(value), fmt)
 
     workbook.close()
 
