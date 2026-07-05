@@ -35,8 +35,17 @@ jobs:
       - name: Test decomposition
         run: bash test/test_decomp.sh
 
+      - name: Test constrain_features with bounds set
+        run: bash test/test_constrain_features_bounds.sh
+
+      - name: Test view_window validation
+        run: bash test/test_view_window_validation.sh
+
       - name: Test MACS2 peak2gene
         run: bash test/test_peak2gene_MACS2.sh
+
+      - name: Test MACS2 peak2gene with up/down bounds
+        run: bash test/test_peak2gene_MACS2_bounds.sh
 
       - name: Test SEACR peak2gene
         run: bash test/test_peak2gene_SEACR.sh
@@ -49,6 +58,9 @@ jobs:
 
       - name: Test MACS2 gene2peak
         run: bash test/test_gene2peak_MACS2.sh
+
+      - name: Test MACS2 gene2peak with k greater than available peaks
+        run: bash test/test_gene2peak_MACS2_k20.sh
 
       - name: Test SEACR gene2peak
         run: bash test/test_gene2peak_SEACR.sh
