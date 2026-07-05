@@ -48,6 +48,9 @@ def main(args):
     if species_genome is not None:
         check_species(species_genome)
 
+    if not (0 <= view_window < 1):
+        raise ValueError(f"view_window must be in [0, 1); got {view_window}")
+
     if function == "peak2gene":
         peak2gene(
             peak_file,
