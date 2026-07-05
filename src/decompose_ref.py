@@ -143,6 +143,7 @@ def split_jumble(df: pl.DataFrame) -> pl.DataFrame:
         keys = [pair.split(" ")[0] for pair in row[0].split("; ")]
         unique_keys.update(keys)
 
+    unique_keys = sorted(unique_keys)
     cols_to_add = {key: [] for key in unique_keys}
     for row in jumble_data.iter_rows(named=True):
         key_value = {
