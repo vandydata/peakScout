@@ -12,6 +12,7 @@
 #
 # ------------------------------------------------------------------------------
 import re
+import urllib.parse
 import polars as pl
 import numpy as np
 from collections import defaultdict
@@ -451,8 +452,9 @@ def get_ucsc_browser_urls(
     urls = []
 
     for i, row in enumerate(df.iter_rows(named=True)):
-        chr = str(row["chr"])
-        chr = chr if chr.startswith("chr") else f"chr{chr}"
+        chrom = str(row["chr"])
+        chrom = chrom if chrom.startswith("chr") else f"chr{chrom}"
+        chrom = urllib.parse.quote(chrom, safe="")
         start = row["start"]
         end = row["end"]
 
@@ -469,11 +471,11 @@ def get_ucsc_browser_urls(
         window_end = region_end + padding
 
         # Peak highlight + gene highlights
-        highlights = [f"{chr}:{start}-{end}%23DA9694"]
+        highlights = [f"{chrom}:{start}-{end}%23DA9694"]
         for gs, ge in gene_coords:
-            highlights.append(f"{chr}:{gs}-{ge}%2395B3D7")
+            highlights.append(f"{chrom}:{gs}-{ge}%2395B3D7")
 
-        url = f"{base_url}{chr}:{window_start}-{window_end}&highlight={'|'.join(highlights)}"
+        url = f"{base_url}{chrom}:{window_start}-{window_end}&highlight={'|'.join(highlights)}"
         urls.append(url)
 
     return urls
