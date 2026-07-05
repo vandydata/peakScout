@@ -21,14 +21,14 @@ HEADER_COLORS = {
     "peak":  "#DA9694",
     "cre":   "#C4D79B",
     "gene":  "#95B3D7",
-    "ucsc":  "#B8CCE4",
+    "ucsc":  "#D9D9D9",
 }
 
 ROW_COLORS = {
     "peak":  "#F2DCDB",
     "cre":   "#EBF1DE",
     "gene":  "#DCE6F1",
-    "ucsc":  "#DCE6F1",
+    "ucsc":  "#F2F2F2",
 }
 
 GRID_BORDER_COLOR = "#404040"
