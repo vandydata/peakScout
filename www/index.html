@@ -13,7 +13,6 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -175,6 +174,11 @@
     const submitBtn = document.getElementById('submitBtn');
 
     // Utilities
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str ?? '';
+      return div.innerHTML;
+    }
     function formatFileSize(bytes) {
       if (bytes === 0) return '0 Bytes';
       const k = 1024, sizes = ['Bytes','KB','MB','GB'];
@@ -246,65 +250,6 @@
       throw new Error('Preview not available for non-ASCII files');
     }
 
-    // Render CSV preview table (first N rows)
-    function renderCsvPreview(container, csvText, rowLimit = 20) {
-    const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-    const rows = parsed.data.slice(0, rowLimit);
-
-    if (!rows.length) {
-      container.innerHTML = '<div class="muted">(No rows to preview)</div>';
-      return;
-    }
-
-    // Determine field order (prefer Papa's meta, fallback to keys from first row)
-    const fields = (parsed.meta && parsed.meta.fields && parsed.meta.fields.length)
-      ? parsed.meta.fields
-      : Object.keys(rows[0] || {});
-
-    // Build table
-    const tableWrap = document.createElement('div');
-    tableWrap.className = 'table-scroll';
-    const table = document.createElement('table');
-    table.className = 'preview';
-
-    // Header
-    const thead = document.createElement('thead');
-    const headRow = document.createElement('tr');
-    fields.forEach((f) => {
-      const th = document.createElement('th');
-      th.textContent = f;
-      if (f.toLowerCase().startsWith('closest_')) {
-        th.classList.add('closest-col');
-      }
-      headRow.appendChild(th);
-    });
-    thead.appendChild(headRow);
-
-    // Body
-    const tbody = document.createElement('tbody');
-    rows.forEach((r) => {
-      const tr = document.createElement('tr');
-      // If r is an object (header:true), pull values by field name
-      // If it somehow ends up an array, fall back to index acces
-      fields.forEach((f, idx) => {
-        const td = document.createElement('td');
-        const val = (r && typeof r === 'object' && !Array.isArray(r)) ? r[f] : (r?.[idx]);
-        td.title = (val ?? '').toString();
-        td.textContent = (val ?? '').toString();
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-
-    table.appendChild(thead);
-    table.appendChild(tbody);
-
-    // Inject into container
-    container.innerHTML = '';
-    container.appendChild(tableWrap);
-    tableWrap.appendChild(table);
-  }
-
     async function downloadOutputFile(filename, fileData, fallbackName='results') {
       try {
         // S3 presigned URL path
@@ -338,7 +283,7 @@
     }
 
     function showError(message) {
-      results.innerHTML = `<div class="error"><h3><span class="material-symbols-outlined">error</span> Error</h3><p>${message}</p></div>`;
+      results.innerHTML = `<div class="error"><h3><span class="material-symbols-outlined">error</span> Error</h3><p>${escapeHtml(message)}</p></div>`;
       results.classList.add('show');
     }
 
@@ -362,32 +307,21 @@
       let html = `<div class="success"><h3><span class="material-symbols-outlined">check_circle</span> peakScout completed!${runtimeStr}</h3></div>`;
 
       // Add job details toggle right after success message
-      let hasJobDetails = data.command || (data.stdout && data.stdout.trim()) || (data.output_files && Object.values(data.output_files).some(file => file.content_preview));
+      let hasJobDetails = data.command || (data.stdout && data.stdout.trim());
       if (hasJobDetails) {
         html += `
           <button class="job-details-toggle" onclick="this.nextElementSibling.classList.toggle('show'); this.textContent = this.nextElementSibling.classList.contains('show') ? 'Hide job details' : 'Show job details';">Show job details</button>
           <div class="job-details">
             ${data.command ? `
-              <div class="card" style="border-left:4px solid #28a745; margin-bottom:12px;">
+              <div class="card card-command">
                 <h4>Command Executed</h4>
-                <code style="font-size:12px; word-break:break-all;">${data.command}</code>
+                <code>${escapeHtml(data.command)}</code>
               </div>
             ` : ''}
             ${data.stdout && data.stdout.trim() ? `
-              <div class="card" style="background:#fff7ed; border-left:4px solid #fb923c; margin-bottom:12px;">
+              <div class="card card-notices">
                 <h4>Notices and warnings</h4>
-                <pre style="font-size:12px; white-space:pre-wrap; margin:0;">${data.stdout}</pre>
-              </div>
-            ` : ''}
-            ${data.output_files && Object.values(data.output_files).some(file => file.content_preview) ? `
-              <div class="card" style="margin-bottom:12px;">
-                <h4><span class="material-symbols-outlined">visibility</span> Lambda Preview</h4>
-                ${Object.entries(data.output_files).map(([filename, fileData]) => 
-                  fileData.content_preview ? `
-                    <div class="muted" style="margin-bottom:8px;">Preview (first 5 lines from Lambda) - ${filename}</div>
-                    <pre style="background:#f8fafc; padding:10px; border-radius:8px; overflow-x:auto; font-size:11px; line-height:1.4;">${fileData.content_preview}</pre>
-                  ` : ''
-                ).join('')}
+                <pre>${escapeHtml(data.stdout)}</pre>
               </div>
             ` : ''}
           </div>
@@ -404,36 +338,27 @@
 
           fileSection.innerHTML = `
            <div class="button-container" style="margin-top:12px;margin-bottom:12px;">
-              <button class="download-btn" data-action="download"><span class="material-symbols-outlined">download</span> Download ${filename} (${formatFileSize(fileData.size || 0)})</button>
+              <button class="download-btn" data-action="download"><span class="material-symbols-outlined">download</span> Download ${escapeHtml(filename)} (${formatFileSize(fileData.size || 0)})</button>
             </div>
-            
-            <div class="preview-wrap">
-              <div class="muted" style="margin-bottom:6px;">Data preview:</div>
-              <div class="preview-mount"></div>
-            </div>
-            
           `;
 
-          // Wire download button and auto-render preview
+          // Wire download button
           const downloadBtn = fileSection.querySelector('button[data-action="download"]');
-          const mount = fileSection.querySelector('.preview-mount');
 
-          // Auto-render preview table
+          // Log file content to console for debugging
           if (fileData.type === 's3_presigned' && fileData.download_url) {
             if (filename.endsWith('.csv')) {
               fetch(fileData.download_url)
                 .then(r => r.text())
-                .then(text => renderCsvPreview(mount, text, 20))
-                .catch(() => { mount.innerHTML = '<div class="muted">Preview not available.</div>'; });
-            } else {
-              mount.innerHTML = '<div class="muted">Preview not available for non-ASCII files.</div>';
+                .then(text => console.log(`[peakScout] ${filename} content:`, text))
+                .catch(err => console.warn(`[peakScout] could not fetch ${filename} for logging:`, err));
             }
           } else {
             try {
               const text = decompressToText(fileData);
-              renderCsvPreview(mount, text, 20);
+              console.log(`[peakScout] ${filename} content:`, text);
             } catch (err) {
-              mount.innerHTML = `<div class="error">${err.message}</div>`;
+              console.warn(`[peakScout] could not decode ${filename} for logging:`, err);
             }
           }
 
@@ -517,12 +442,12 @@
       const sizeDisplay = formatFileSize(file.size);
       
       if (!validation.valid) {
-        fileLabel.innerHTML = `<span class="material-symbols-outlined">error</span> ${file.name} (${sizeDisplay})`;
+        fileLabel.innerHTML = `<span class="material-symbols-outlined">error</span> ${escapeHtml(file.name)} (${sizeDisplay})`;
         fileLabel.classList.remove('has-file');
         fileLabel.classList.add('error');
         showFieldError('file', validation.message);
       } else {
-        fileLabel.innerHTML = `<span class="material-symbols-outlined">check_circle</span> ${file.name} (${sizeDisplay})`;
+        fileLabel.innerHTML = `<span class="material-symbols-outlined">check_circle</span> ${escapeHtml(file.name)} (${sizeDisplay})`;
         fileLabel.classList.add('has-file');
         fileLabel.classList.remove('error');
       }

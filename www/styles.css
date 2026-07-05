@@ -176,32 +176,6 @@
     box-shadow: 0 4px 15px rgba(77,124,80,.3);
   }
   
-  /* Table styles */
-  .table-scroll { 
-    border:1px solid #e5e7eb; border-radius:10px; 
-    overflow:auto; max-height:420px; background:#fff;
-  }
-  
-  table.preview { 
-    width:100%; border-collapse:separate; border-spacing:0; 
-    font-size:12px;
-  }
-  
-  table.preview thead th { 
-    position:sticky; top:0; background:#f4f1e9; 
-    border-bottom:1px solid #e5e7eb; padding:10px; 
-    text-align:left; font-weight:800;
-  }
-  
-  table.preview thead th.closest-col { 
-    background:#dbba35; color:#fff;
-  }
-  
-  table.preview tbody td { 
-    border-bottom:1px solid #f3f4f6; padding:8px 10px; 
-    white-space:nowrap; text-overflow:ellipsis; overflow:hidden;
-  }
-  
   .footer {
     text-align: center; padding: 10px; margin-top: 20px; 
     font-size: 14px; color: #4a4a4a;
@@ -231,7 +205,10 @@
   .success { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:16px; border-radius:8px; font-size:15px; }
   .secondary-btn { background:#f4f1e9; color:#5e503f; border:1px solid #d1c7b3; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:700; margin: 8px 6px 0 0; }
   .card { margin:15px 0; padding:18px; border:2px solid #e5e7eb; border-radius:12px; background:#fff; }
-  .preview-wrap { margin-top:14px; border-top:1px solid #e5e7eb; padding-top:12px; }
+  .card-command { border-left:4px solid #dbba35; margin-bottom:12px; }
+  .card-notices { background:#f4f1e9; border-left:4px solid #dbba35; margin-bottom:12px; }
+  .card-command code { font-size:12px; word-break:break-all; }
+  .card-notices pre { font-size:12px; white-space:pre-wrap; margin:0; }
   .muted { color:#6b7280; font-size:12px; }
   .job-details-toggle { background: none; border: none; color: #3b82f6; cursor: pointer; font-size: 14px; text-decoration: underline; margin: 12px 0; padding: 0; }
   .job-details-toggle:hover { color: #1d4ed8; }
