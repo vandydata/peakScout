@@ -280,7 +280,7 @@ def constrain_features(
     None
     """
     if down_bound is not None:
-        ds_upper = starts.searchsorted(peak_end + down_bound, side="right")
+        ds_upper = starts[:, 0].searchsorted(peak_end + down_bound, side="right")
     else:
         ds_upper = len(starts)
 

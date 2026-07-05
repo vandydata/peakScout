@@ -8,6 +8,7 @@ export PATH="$PATH:$PROJECT_ROOT/src"
 
 bash "$SCRIPT_DIR/remove_previous.sh"
 bash "$SCRIPT_DIR/test_decomp.sh"
+bash "$SCRIPT_DIR/test_constrain_features_bounds.sh"
 bash "$SCRIPT_DIR/test_peak2gene_MACS2.sh"
 bash "$SCRIPT_DIR/test_peak2gene_SEACR.sh"
 bash "$SCRIPT_DIR/test_peak2gene_BED6.sh"
