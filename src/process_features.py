@@ -229,8 +229,9 @@ def get_nearest_features(
         while i > 0:
             features_to_add[k - i + 1].append("N/A")
             dists_to_add[k - i + 1].append(None)
-            gene_info_to_add["id"][k - i + 1].append("N/A")
-            gene_info_to_add["type"][k - i + 1].append("N/A")
+            if gene_info_to_add is not None:
+                gene_info_to_add["id"][k - i + 1].append("N/A")
+                gene_info_to_add["type"][k - i + 1].append("N/A")
             gene_coords_to_add[k - i + 1].append(None)
             i -= 1
 
