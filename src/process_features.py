@@ -554,7 +554,7 @@ def add_cre_annotations(peaks_df: pl.DataFrame, cre_df: pl.DataFrame) -> pl.Data
 
     Returns:
     peaks_df (pl.DataFrame): Input DataFrame with cre_overlap[, cre_accession][, cre_type]
-    columns inserted before closest_ columns.
+    columns inserted after the nearest gene columns.
 
     Outputs:
     None

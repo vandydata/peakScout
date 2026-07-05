@@ -103,7 +103,10 @@ def write_to_excel(output: pl.DataFrame, output_name: str, out_dir: str) -> None
         if col_idx == url_col_idx:
             col_widths.append(len(url_display_text) + 2)
             continue
-        max_data = output[col].cast(pl.Utf8).str.len_chars().max() or 0
+        if is_float_col[col_idx]:
+            max_data = output[col].round(2).cast(pl.Utf8).str.len_chars().max() or 0
+        else:
+            max_data = output[col].cast(pl.Utf8).str.len_chars().max() or 0
         col_widths.append(max(int(max_data), 1) + 2)
 
     # Write headers
