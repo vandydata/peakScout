@@ -1,5 +1,5 @@
 # Use AWS Lambda Python base image (optimized for Lambda)
-FROM public.ecr.aws/lambda/python:3.11
+FROM public.ecr.aws/lambda/python:3.13
 
 # Lambda-specific dependencies
 COPY aws/requirements.txt ${LAMBDA_TASK_ROOT}/requirements-lambda.txt
