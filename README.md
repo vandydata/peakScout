@@ -3,6 +3,8 @@
 <!-- badges: start -->
 [![peakScout](https://github.com/vandydata/peakScout/actions/workflows/python.yaml/badge.svg)](https://github.com/vandydata/peakScout/actions/workflows/python.yaml)
 [![License: AGPLv3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![DOI](https://zenodo.org/badge/748297527.svg)](https://doi.org/10.5281/zenodo.21211605)
+
 <!-- badges: end -->
 
 peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results
