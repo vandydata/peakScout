@@ -65,7 +65,7 @@ We have made available a Docker image for peakScout, which can be run as follows
 # get the latest 
 docker run -it --rm jpcartailler/peakscout:latest peakScout --help
 # or a specific version
-docker run -it --rm jpcartailler/peakscout:1.0.1 peakScout --help
+docker run -it --rm jpcartailler/peakscout:1.1 peakScout --help
 ```
 
 For singularity, you can convert the Docker image to a Singularity image and run it as follows:
@@ -76,8 +76,8 @@ singularity pull docker://jpcartailler/peakscout:latest
 singularity exec peakscout_latest.sif peakScout --help
 
 # or a specific version
-singularity pull docker://jpcartailler/peakscout:1.0.1
-singularity exec peakscout_latest.sif peakScout --help
+singularity pull docker://jpcartailler/peakscout:1.1
+singularity exec peakscout_1.1.sif peakScout --help
 ```
 
 ## Usage
