@@ -6,7 +6,7 @@
 #   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/
 #  /_/
 #
-# Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
+# Copyright 2025 GNU AFFERO GENERAL PUBLIC LICENSE
 # Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
 # https://github.com/vandydata/peakScout
 #
@@ -57,7 +57,7 @@ def peak2gene(
     drop_columns (bool): Whether to drop unnecessary columns from the original file. Default False.
     view_window (float): Proportion of the peak region in entire genome browser window. Default 0.2.
     cre_file (str): Path to a BED file of CRE regions for overlap annotation. If None, auto-detects
-                    ref_dir/cre/cre.bed when present. Default None.
+                    ref_dir/cre/{species}-cre.bed when present. Default None.
 
     Returns:
     None

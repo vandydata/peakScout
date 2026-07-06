@@ -6,7 +6,7 @@
 #   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/
 #  /_/
 #
-# Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
+# Copyright 2025 GNU AFFERO GENERAL PUBLIC LICENSE
 # Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
 # https://github.com/vandydata/peakScout
 #

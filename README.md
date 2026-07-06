@@ -7,7 +7,7 @@
 
 <!-- badges: end -->
 
-peakScout is a user-friendly and reversible peak-to-gene translator for genomic peak calling results
+peakScout is a biologist-friendly tool for bidirectional peak-gene mapping of genomic peak calling results
 
 > If you use peakScout, please cite https://doi.org/10.1101/2025.09.07.671934 - thank you!
 
@@ -18,6 +18,7 @@ PeakScout is a bioinformatics tool designed to bridge the gap between genomic pe
 peakScout performs:
 - **Peak-to-Gene Mapping**: This function identifies the nearest genes to each peak, allowing researchers to infer which genes might be regulated by specific genomic regions. Users can specify how many nearest genes (k) they want to retrieve for each peak.
 - **Gene-to-Peak Mapping**: Conversely, this function finds the nearest peaks to a list of genes, helping researchers identify potential regulatory elements that may influence gene expression.
+- **CRE overlap annotation** (optional): Flags each peak for overlap with candidate cis-regulatory elements (cCREs) from the ENCODE cCRE Registry (auto-downloaded for hg38/mm10) or a user-supplied BED file for any other assembly.
 
 peakScout expects two inputs: 
 1. A **peak file** (in BED6 format or as output from MACS2 or SEACR) 
@@ -25,7 +26,7 @@ peakScout expects two inputs:
 
 peakScout can be run via:
 - **Command line**: peakScout is designed to be run from the command line, making it accessible for users comfortable with terminal operations.
-- **Cloud computing**: for instanct access web access, we have set up peakScout in the cloud - https://vandydata.github.io/peakScout.
+- **Cloud computing**: for instant web access, we have set up peakScout in the cloud - https://vandydata.github.io/peakScout.
 
 ## Installation
 
@@ -120,13 +121,15 @@ Once a reference GTF has been decomposed, you can use the decomposition to find 
 | `out_dir`       | `str`   | Directory to output file.                                                            |
 | `output_type`   | `str`   | Output type (csv file or xlsx file).                                                 |
 | `species_genome`| `str`   | Species of the reference genome.                                                     |
-| `option`        | `str`   | Option for defining start and end positions of peaks. Default native_peak_bounaries. |
+| `option`        | `str`   | Option for defining start and end positions of peaks. Default native_peak_boundaries. |
 | `boundary`      | `int`   | Boundary for artificial peak boundary option. `None` if other options.               |
 | `up_bound`      | `int`   | Maximum allowed distance between peak and upstream feature. Default `None`.          |
 | `down_bound`    | `int`   | Maximum allowed distance between peak and downstream feature. Default `None`.        |
 | `consensus`     | `bool`  | Whether to use consensus peaks. Default `False`.                                     |
 | `drop_columns`  | `bool`  | Whether to drop unnecessary columns from the original file. Default `False`.         |
-| `view_window`   | `float` | Proportion of the peak region in entire genome browser window. Default `0.2`.        |
+| `view_window`   | `float` | Proportion of the peak region in entire genome browser window. Must be in `[0, 1)`. Default `0.2`. |
+| `use_cre`       | `bool`  | Annotate peaks with cis-regulatory elements (CREs). Auto-detects CRE file from `ref_dir/cre/`, only for hg38 or mm10. Default `False`. |
+| `cre_file`      | `str`   | Explicit path to a CRE BED file. Implies `--use_cre`. Overrides auto-detection and is required for species other than hg38/mm10. Default `None`. |
 
 Run the following command to create an Excel sheet containing the nearest k genes to your peaks
 ```bash
@@ -155,6 +158,38 @@ peakScout peak2gene \
 --output_type xlsx
 ```
 
+### CRE overlap annotation
+
+To flag peaks overlapping ENCODE candidate cis-regulatory elements (cCREs), first download the
+cCRE registry for your assembly (hg38 or mm10 only). Note that `get_cre`'s `--ref_dir` is the
+**parent** directory, one level above the species-specific directory used by `decompose` and
+`peak2gene`/`gene2peak`:
+
+```bash
+peakScout get_cre \
+--species_genome hg38 \
+--ref_dir reference
+```
+
+This saves the cCRE BED file to `reference/hg38/cre/hg38-cre.bed`. Then run `peak2gene` with
+`--use_cre`, using the species-specific `ref_dir` (as with `decompose`/`peak2gene` elsewhere in
+this README) so `--use_cre` can auto-detect the file:
+
+```bash
+peakScout peak2gene \
+--peak_file test/test_MACS2.bed \
+--peak_type MACS2 \
+--species_genome hg38 \
+--k 3 \
+--ref_dir reference/hg38 \
+--use_cre \
+--output_name peakScout_test_MACS2_cre \
+--o my_output_dir \
+--output_type xlsx
+```
+
+For assemblies other than hg38/mm10, supply your own CRE BED file with `--cre_file`.
+
 ### Finding Nearest Peaks
 
 Once a reference GTF has been decomposed, you can also use the decomposition to find the nearest peaks to a set of genes. Peak files can be MACS2, SEACR outputs, or standard BED6 format files and can be Excel sheets or BED files. Gene names should be in a single column CSV or txt file with no header.
@@ -172,6 +207,8 @@ Once a reference GTF has been decomposed, you can also use the decomposition to 
 | `option`       | `str`  | Option for defining start and end positions of peaks. Default native_peak_boundaries. |
 | `boundary`     | `int`  | Boundary for artificial peak boundary option. `None` if other options.                |
 | `consensus`    | `bool` | Whether to use consensus peaks. Default `False`.                                      |
+| `use_cre`      | `bool` | Annotate peaks with cis-regulatory elements (CREs). Auto-detects CRE file from `ref_dir/cre/`, only for hg38 or mm10. Default `False`. |
+| `cre_file`     | `str`  | Explicit path to a CRE BED file. Implies `--use_cre`. Overrides auto-detection and is required for species other than hg38/mm10. Default `None`. |
 
 Run the following command to create an Excel sheet containing the nearest k peaks to your genes
 ```bash
@@ -198,6 +235,32 @@ peakScout gene2peak \
 --o my_output_dir \
 --output_type csv
 ```
+
+## Output columns
+
+`peak2gene` output includes, for each peak, its coordinates and score/signal fields from the
+input file, followed by `k` blocks of nearest-gene columns:
+
+| Column | Description |
+|--------|--------------|
+| `geneN_synonym` | Name of the Nth-nearest gene |
+| `geneN_dist2peak` | Distance (bp) from the peak to that gene; negative values indicate an upstream feature |
+| `geneN_ensemblid` | Ensembl gene ID |
+| `geneN_biotype` | Gene biotype (e.g. `protein_coding`, `lincRNA`) |
+
+If `--use_cre`/`--cre_file` was set, three additional columns follow the gene blocks:
+
+| Column | Description |
+|--------|--------------|
+| `cre_overlap` | Boolean flag: does the peak overlap a CRE |
+| `cre_accession` | Semicolon-delimited ENCODE cCRE accession IDs |
+| `cre_type` | CRE classification (e.g. `PLS`, `dELS`, `pELS`, `CTCF-only`) |
+
+The final column, `ucsc_gb_url`, is a link to the UCSC Genome Browser highlighting the peak and
+its nearest gene(s) in context (for species with a supported UCSC genome build).
+
+`gene2peak` output mirrors this structure from the gene's perspective: `peakN_name` and
+`peakN_dist2gene` for each of the `k` nearest peaks.
 
 ## peakScout ready-made references for common organisms
 

@@ -6,7 +6,7 @@
 #   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/
 #  /_/
 #
-# Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
+# Copyright 2025 GNU AFFERO GENERAL PUBLIC LICENSE
 # Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
 # https://github.com/vandydata/peakScout
 #
@@ -377,6 +377,7 @@ def gen_return_roi(
     features_to_add (dict): Dictionary that maps integer n with a list of the nth closest feature.
     dists_to_add (dict): Dictionary that maps integer n with a list of the distance between the peak and the nth closest feature.
     gene_info_to_add (dict): Dictionary that maps 'id' and 'type' to dictionaries that map integer n with a list of the gene id/type of the nth closest feature. If feature is not 'gene_name', this is None.
+    gene_coords_to_add (dict): Dictionary that maps integer n to a list of (start, end) tuples for the nth closest feature, used to build UCSC genome browser highlight URLs.
     k (int): Number of closest features to determine.
     species_genome (str): Species of the reference genome.
     view_window (float): Proportion of the peak region in entire genome browser window.

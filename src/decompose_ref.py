@@ -6,7 +6,7 @@
 #   / .___/\___/\__,_/_/|_|/____/\___/\____/\__,_/\__/
 #  /_/
 #
-# Copyrigh 2025 GNU AFFERO GENERAL PUBLIC LICENSE
+# Copyright 2025 GNU AFFERO GENERAL PUBLIC LICENSE
 # Alexander L. Lin, Lana A. Cartailler, Jean-Philippe Cartailler
 # https://github.com/vandydata/peakScout
 #
@@ -35,9 +35,8 @@ def decompose_gtf(ref_dir: str, gtf_ref: str) -> None:
 
                 ref_dir/feature/chr{i}_[start | end].csv
 
-    where species is the species provided in the parameters, feature is the
-    particular feature being decomposed (i.e. gene, CDS, exon, etc), i ranges
-    from 1 to the total number of chromosomes (and can also include non-autosomes
+    where feature is the particular feature being decomposed (i.e. gene, CDS, exon, etc),
+    i ranges from 1 to the total number of chromosomes (and can also include non-autosomes
     such as X and Y and non-nuclear chromosomes such as M), and [start | end] means
     that particular CSV file will contain the features sorted by either start or
     end position.
@@ -101,11 +100,9 @@ def save_csvs(df: pl.DataFrame, col: str, out_dir: str) -> None:
 
                 out_dir/feature/chr{i}_[start | end].csv
 
-    where reference is the specified reference directory in ref_dir, species
-    is the species given in the parameters, i ranges from i to the number of chromosomes
-    (and can include non-autosomes such as X, Y, and non-nuclear chromosomes such as M), and
-    start or end indicates that this CSV contains the features sorted by either start or end
-    position, respectively.
+    where i ranges from 1 to the number of chromosomes (and can include non-autosomes such as
+    X, Y, and non-nuclear chromosomes such as M), and start or end indicates that this CSV
+    contains the features sorted by either start or end position, respectively.
     """
 
     for name, group in df.items():
