@@ -390,18 +390,24 @@ def gen_return_roi(
     """
     is_gene = feature == "gene_name"
     for i in range(1, k + 1):
+        # Force Int64 explicitly: a chromosome where every peak/gene has fewer than k
+        # neighbors produces an all-None dist column, which polars infers as dtype Null
+        # instead of Int64. Concatenating that against another chromosome's real Int64
+        # values then fails (or silently depends on which chromosome is concatenated
+        # first), so the dtype must be pinned here rather than inferred.
+        dist_series = pl.Series(f"dist_{i}", dists_to_add[i], dtype=pl.Int64)
         if is_gene:
             return_roi = return_roi.with_columns(
                 [
                     pl.Series(f"gene{i}_synonym", features_to_add[i]),
-                    pl.Series(f"gene{i}_dist2peak", dists_to_add[i]),
+                    dist_series.rename(f"gene{i}_dist2peak"),
                 ]
             )
         else:
             return_roi = return_roi.with_columns(
                 [
                     pl.Series(f"peak{i}_name", features_to_add[i]),
-                    pl.Series(f"peak{i}_dist2gene", dists_to_add[i]),
+                    dist_series.rename(f"peak{i}_dist2gene"),
                 ]
             )
 
