@@ -31,7 +31,25 @@
   
   .header-description { 
     opacity:.9; font-size:15px; margin: 0;
+    padding-top: 30px;
     transition: all 0.5s ease;
+  }
+.header-content a {
+    color: #3b82f6; text-decoration: none;
+  }
+  
+  .header-content a:hover {
+    color: #1d4ed8; text-decoration: underline;
+  }
+  
+
+  
+  .header-content {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .header-content p {
+    margin: 0; font-size: 13px; opacity: .8;
   }
   
   .header-links { 
@@ -219,7 +237,7 @@
 
   @media (max-width: 768px) {
     .header { grid-template-columns: 1fr; justify-items: center; gap: 16px; }
-    .header-description { grid-column: 1; text-align: center; }
+    .header-description { grid-column: 1; text-align: center; padding-top:10px;}
     .header-links { position: static; align-items: center; }
     .form-row { grid-template-columns: 1fr; }
   }

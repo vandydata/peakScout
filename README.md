@@ -9,7 +9,7 @@
 
 peakScout is a biologist-friendly tool for bidirectional peak-gene mapping of genomic peak calling results
 
-> If you use peakScout, please cite https://doi.org/10.1101/2025.09.07.671934 - thank you!
+> If you use peakScout, please cite [Alexander L Lin, Lana A Cartailler, Jean-Philippe Cartailler, peakScout - a biologist-friendly tool for bidirectional peak-gene mapping, Bioinformatics, 2026;, btag653, https://doi.org/10.1093/bioinformatics/btag653](https://doi.org/10.1093/bioinformatics/btag653) - thank you!
 
 ## Overview
 
